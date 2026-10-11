@@ -276,12 +276,13 @@ img.zoomable { cursor: zoom-in; }
 .wt-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
 .wt-slides img.on { opacity: 1; }
 .wt-slide-ctl { position: absolute; left: 2.4vw; bottom: 3vh; z-index: 2; display: flex; align-items: center; gap: 12px; }
-/* quiet: the colour of the room label (light), no fill; a soft shadow keeps them readable on a bright sky */
-.wt-slide-btn { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 2px solid var(--c-light, #ccc); background: transparent; color: var(--c-light, #ccc); display: flex; align-items: center; justify-content: center;
-  filter: drop-shadow(0 1px 4px rgba(0,0,0,.45)); transition: background-color .3s, color .3s; }
-.wt-slide-btn svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+/* quiet: the colour of the room label (light), no fill, no shadow; 36px, with a bigger invisible area for fingers */
+.wt-slide-btn { position: relative; width: 36px; height: 36px; flex: none; border-radius: 50%; border: 2px solid var(--c-light, #ccc); background: transparent; color: var(--c-light, #ccc); display: flex; align-items: center; justify-content: center;
+  transition: background-color .3s, color .3s; }
+.wt-slide-btn::after { content: ""; position: absolute; inset: -5px; }
+.wt-slide-btn svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .wt-slide-btn:hover, .wt-slide-btn:focus-visible { background: rgba(21,20,19,.35); color: #fff; border-color: #fff; }
-.wt-slide-count { min-width: 3em; text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.wt-slide-count { min-width: 3em; text-align: center; }
 /* walkthrough: dots navigation (nav: "dots"), bottom right */
 .wt-hud.wt-hud-dots { pointer-events: none; left: auto; right: 4vw; bottom: 5vh; width: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .wt-hud-dots .wt-labels { width: 40vw; text-align: right; }
