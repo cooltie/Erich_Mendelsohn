@@ -754,9 +754,9 @@ window.EXHIBITION = {
        After the walk through five works: his own words on the Mossehaus (1923 lecture, our translation). */
     {
       id: "dynamic-city",
+      hide: true, // hidden for now
       bg: "ink", ink: "paper",
       mobile: { scroll: true, flow: true }, // phones: quote, German, source one under another
-      line: { color: "paper" },
       elements: [
         { id: "city-label", type: "text", role: "label", color: "paper", text: "Room 3 · The Dynamic City",
           box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
@@ -776,24 +776,24 @@ window.EXHIBITION = {
           box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { hide: true }, enter: { effect: "fade-up", delay: 4000 } }
       ]
     },
-    { id: "letters-1933", bg: "ink", ink: "paper", elements: [{ id: "letters-1933-title", type: "text", role: "title", color: "paper", text: "Letters to Luise · 1933", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
-    { id: "exile", bg: "stone", elements: [{ id: "exile-title", type: "text", role: "title", text: "Architecture in Exile", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
-    { id: "silence", bg: "ink", ink: "paper", elements: [] },
-    { id: "finale", elements: [{ id: "finale-title", type: "text", role: "title", text: "What remains of an architect when buildings change?", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    { id: "letters-1933", hide: true, bg: "ink", ink: "paper", elements: [{ id: "letters-1933-title", type: "text", role: "title", color: "paper", text: "Letters to Luise · 1933", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    { id: "exile", hide: true, bg: "stone", elements: [{ id: "exile-title", type: "text", role: "title", text: "Architecture in Exile", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    { id: "silence", hide: true, bg: "ink", ink: "paper", elements: [] },
+    { id: "finale", hide: true, elements: [{ id: "finale-title", type: "text", role: "title", text: "What remains of an architect when buildings change?", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
     /* After the exhibition (at the end of the walk): the curators' note, the line becomes a chart, then the numbers. All figures are fictional. */
     {
       id: "after",
       line: { color: "ink" },
       elements: [
         { id: "after-label", type: "text", role: "label", text: "After the exhibition",
-          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh" } },
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } },
           enter: { effect: "fade-in" } },
         { id: "after-note", type: "text", role: "lead",
           text: "For four months this exhibition followed one line: the line Erich Mendelsohn drew before every building. It ran from sketches made at the front in 1917 to a hospital in San Francisco. The exhibition has ended. The archive stays open, and the line still leads out into the cities where his buildings stand.",
-          box: { left: "4vw", top: "14vh", width: "37.4vw" }, mobile: { box: { left: "6vw", top: "9vh", width: "88vw" }, role: "body" },
+          box: { left: "4vw", top: "14vh", width: "37.4vw" }, mobile: { box: { left: "6vw", top: "10vh", width: "88vw" }, role: "body" },
           enter: { effect: "fade-up", speed: "slow", delay: 500 } },
         { id: "after-chart-label", type: "text", role: "label", text: "Visits per week",
-          box: { left: "50.8vw", top: "14vh", width: "30vw" }, mobile: { box: { left: "6vw", top: "45vh" } },
+          box: { left: "50.8vw", top: "14vh", width: "30vw" }, mobile: { box: { left: "6vw", top: "45vh", width: "60vw" } },
           enter: { effect: "fade-in", delay: 1000 } },
         { id: "after-chart", type: "line", viewBox: "0 0 1000 300", fit: "none",
           paths: [{ d: "M 0 299 L 1000 299", stroke: "grey", width: 1 }, { d: chartPath(WEEKLY, 1000, 300, 12), stroke: "ink", width: 2 }],
@@ -822,29 +822,30 @@ window.EXHIBITION = {
     /* Voices: press and visitors (fictional). */
     {
       id: "voices",
+      mobile: { scroll: true, flow: true }, // phones: the press quote, then the three voices one under another
       elements: [
         { id: "voices-label", type: "text", role: "label", text: "Voices",
           box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
         { id: "voices-press", type: "text", role: "title",
           text: "“A show about one man’s pencil that ends up being about every street you walk down.”",
-          box: { left: "4vw", top: "14vh", width: "61vw" }, mobile: { box: { left: "6vw", top: "10vh", width: "88vw" } },
+          box: { left: "4vw", top: "14vh", width: "61vw" }, mobile: { box: { width: "88vw", marginTop: "4vh" } },
           enter: { effect: "words-in", stagger: 40, speed: "slow", delay: 200 } },
         { id: "voices-press-src", type: "text", role: "small", text: "*The Weekly Plan*, review",
-          box: { left: "4vw", top: "34vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "27vh" } }, enter: { effect: "fade-in", delay: 1400 } },
+          box: { left: "4vw", top: "34vh", width: "40vw" }, mobile: { box: { width: "88vw", marginTop: "2.5vh" } }, enter: { effect: "fade-in", delay: 1400 } },
         { id: "voices-1", type: "text", role: "body", gap: "0.7em",
           paragraphs: ["★★★★★", "I came for the Einstein Tower and stayed for the letters. The 1933 room is quiet on purpose. I sat with it for a long time.", "*Ilse K., Leipzig*"],
-          box: { left: "4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "38vh", width: "88vw" } },
+          box: { left: "4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { width: "88vw", marginTop: "6vh" } },
           enter: { effect: "fade-up", delay: 1600 } },
         { id: "voices-2", type: "text", role: "body", gap: "0.7em",
           paragraphs: ["♥ 2,314", "Tried the *draw the line* workshop with my students. Thirty sketches of a building none of them had seen, and every one of them moved.", "*@marta.draws*"],
-          box: { left: "35.2vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "56vh", width: "88vw" } },
+          box: { left: "35.2vw", top: "48vh", width: "29.6vw" }, mobile: { box: { width: "88vw", marginTop: "6vh" } },
           enter: { effect: "fade-up", delay: 1800 } },
         { id: "voices-3", type: "text", role: "body", gap: "0.7em",
           paragraphs: ["★★★★★", "Finished the walk and booked a train to Luckenwalde to see the hat factory. That’s the review.", "*Daniel R., Rotterdam*"],
-          box: { left: "66.4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "74vh", width: "88vw" } },
+          box: { left: "66.4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { width: "88vw", marginTop: "6vh" } },
           enter: { effect: "fade-up", delay: 2000 } },
         { id: "voices-note", type: "text", role: "small", text: "Reviews, press and figures are fictional: this is a concept project.", align: "right",
-          box: { right: "4vw", bottom: "8.5vh", width: "30vw" }, mobile: { hide: true },
+          box: { right: "4vw", bottom: "8.5vh", width: "30vw" }, mobile: { box: { width: "88vw", marginTop: "8vh" }, align: "left" },
           enter: { effect: "fade-in", delay: 2400 } }
       ]
     },
@@ -1624,11 +1625,12 @@ window.EXHIBITION = {
     renderNav() {
       this.ticks.innerHTML = "";
       this.ex.nav.forEach((n, i) => {
+        if (!n.screens.some((id) => this.byId[id])) return; // all its screens hidden
         const b = h("button", "tick");
         b.dataset.nav = i;
         const label = h("span", "tick-label");
         b.appendChild(label);
-        b.addEventListener("click", () => this.go(n.screens[0]));
+        b.addEventListener("click", () => this.go(n.screens.find((id) => this.byId[id])));
         this.ticks.appendChild(b);
       });
     }
@@ -1665,6 +1667,7 @@ window.EXHIBITION = {
       }
 
       this.ex.screens.forEach((def) => {
+        if (def.hide) return; // hide: true keeps the screen in exhibition.js but out of the walk (e.g. not built yet)
         // def.mobile: screen-level overrides for narrow screens, e.g. {scroll: true, flow: true}
         if (this.mobile && def.mobile) def = Object.assign({}, def, def.mobile);
         const el = h("section", "screen");
