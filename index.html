@@ -450,7 +450,7 @@ window.EXHIBITION = {
     { label: { en: "The Route" }, screens: ["route"] },
     { label: { en: "The Sketch" }, screens: ["sketch", "letter-1917"] },
     { label: { en: "Einstein Tower" }, screens: ["einstein-tower", "manifesto"] },
-    { label: { en: "The Dynamic City" }, screens: ["dynamic-city", "city-walk"] },
+    { label: { en: "The Dynamic City" }, screens: ["city-walk", "dynamic-city"] },
     { label: { en: "Letters to Luise · 1933" }, screens: ["letters-1933"] },
     { label: { en: "Architecture in Exile" }, screens: ["exile"] },
     { label: { en: "Finale" }, screens: ["silence", "finale"] },
@@ -627,13 +627,14 @@ window.EXHIBITION = {
           box: { left: "4vw", top: "20vh", width: "52vw" }, mobile: { box: { width: "88vw", marginTop: "5vh" } },
           enter: { effect: "words-in", stagger: 45, speed: "slow", delay: 600 } },
         { id: "letter-1917-from", type: "text", role: "small", color: "paper", text: "Erich Mendelsohn to Luise Mendelsohn. Translated from the German for this exhibition.",
-          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { width: "88vw", order: "3", marginTop: "3vh" }, enter: { effect: "fade-in", delay: 1800 } }, enter: { effect: "fade-in", delay: 2600 } },
+          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { width: "88vw", order: "3", marginTop: "3vh" } }, enter: { effect: "fade-in", delay: 4600 } },
         { id: "letter-1917-scan", type: "image", src: "assets/img/letter-1917-06-08.webp", opacity: 0.92,
           alt: "Two handwritten pages of Erich Mendelsohn’s letter of 8 June 1917; the quoted passage is at the top of the right-hand page",
           text: "Pages 7 and 8 of a letter to Luise. The passage quoted here begins at the top of the right-hand page: *bei der Aufzeichnung der Gesichte*, when setting down the visions.",
           credit: ["**Erich Mendelsohn to Luise Mendelsohn**, Ilipan, 8 June 1917, pages 7–8", "© Stiftung Preußischer Kulturbesitz, Kunstbibliothek – Staatliche Museen zu Berlin. EMA – Erich Mendelsohn Archive, ID emaem_19170608_006_tb-02_v.", "Licence: CC BY-NC-SA 3.0 DE (creativecommons.org/licenses/by-nc-sa/3.0/de).", "Quotation translated from the German original for this exhibition."],
           box: { left: "60.4vw", top: "18vh", width: "min(35.6vw, 82vh)" }, mobile: { box: { width: "88vw", order: "2", marginTop: "5vh" } },
-          enter: { effect: "fade-in", speed: "slow", delay: 1400 } }
+          // one thing at a time: the scan comes once the quote is written out
+          enter: { effect: "fade-in", speed: "slow", delay: 3100 } }
       ]
     },
 
@@ -704,31 +705,6 @@ window.EXHIBITION = {
           box: { left: "4vw", bottom: "8vh", width: "60vw" }, mobile: { box: { width: "88vw", marginTop: "5vh" } }, enter: { effect: "fade-in", delay: 2800 } }
       ]
     },
-    /* Room 3 · The Dynamic City. Night: the city of the 1920s, its traffic and its lit bands of windows.
-       First his own words on the Mossehaus (1923 lecture, our translation), then a walk through five works. */
-    {
-      id: "dynamic-city",
-      bg: "ink", ink: "paper",
-      line: { color: "paper" },
-      elements: [
-        { id: "city-label", type: "text", role: "label", color: "paper", text: "Room 3 · The Dynamic City",
-          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
-        miniRoute("city-map", 1926, "1920s · Berlin", null),
-        { id: "city-quote", type: "text", role: "title", color: "paper", gap: "0.5em",
-          paragraphs: ["“Here the house is no uninvolved spectator of the rushing cars and the traffic flooding back and forth.", "It has become an element of movement: it takes the traffic in and takes part in it.”"],
-          box: { left: "4vw", top: "22vh", width: "58vw" }, mobile: { box: { left: "6vw", top: "14vh", width: "88vw" } },
-          enter: { effect: "words-in", stagger: 40, speed: "slow", delay: 300 } },
-        { id: "city-quote-de", type: "text", role: "lead", color: "paper", italic: true, opacity: 0.5,
-          text: "„…kein unbeteiligter Zuschauer der sausenden Autos, des hin und her flutenden Verkehrs, sondern … zum aufnehmenden, mitwirkenden Bewegungselement geworden.“",
-          box: { left: "4vw", top: "58vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "56vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2400 } },
-        { id: "city-quote-src", type: "text", role: "small", color: "paper", opacity: 0.7,
-          text: "Erich Mendelsohn on the Mossehaus, the Berliner Tageblatt building on a busy corner in Berlin. Lecture, Amsterdam, 1923. English translation made for this exhibition.",
-          box: { left: "4vw", bottom: "8vh", width: "52vw" }, mobile: { box: { left: "6vw", bottom: "5vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2800 } },
-        { id: "city-mauretania", type: "text", role: "body", color: "paper",
-          text: "In his studio the new façade had a nickname: *the Mauretania entering Berlin’s Westhafen*, after the great ocean liner. He repeated the joke in the same lecture and said it held as much truth as irony.",
-          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { hide: true }, enter: { effect: "fade-up", delay: 3200 } }
-      ]
-    },
 
     /* Room 3 · walk through the city (scroll moves the strip sideways). Photos: Wikimedia Commons, licences per item. */
     {
@@ -771,6 +747,33 @@ window.EXHIBITION = {
               paragraphs: ["One long curve following the street, striped with windows from end to end. Salman Schocken commissioned several stores from Mendelsohn; this one survives and now houses the State Museum of Archaeology Chemnitz."],
               credits: ["Photo: Altsachse, 2014. Wikimedia Commons, CC BY-SA 4.0."] }
           ] }
+      ]
+    },
+
+    /* Room 3 · The Dynamic City. Night: the city of the 1920s, its traffic and its lit bands of windows.
+       After the walk through five works: his own words on the Mossehaus (1923 lecture, our translation). */
+    {
+      id: "dynamic-city",
+      bg: "ink", ink: "paper",
+      mobile: { scroll: true, flow: true }, // phones: quote, German, source one under another
+      line: { color: "paper" },
+      elements: [
+        { id: "city-label", type: "text", role: "label", color: "paper", text: "Room 3 · The Dynamic City",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        miniRoute("city-map", 1926, "1920s · Berlin", null),
+        { id: "city-quote", type: "text", role: "title", color: "paper", gap: "0.5em",
+          paragraphs: ["“Here the house is no uninvolved spectator of the rushing cars and the traffic flooding back and forth.", "It has become an element of movement: it takes the traffic in and takes part in it.”"],
+          box: { left: "4vw", top: "22vh", width: "58vw" }, mobile: { box: { width: "88vw", marginTop: "6vh" } },
+          enter: { effect: "words-in", stagger: 40, speed: "slow", delay: 300 } },
+        { id: "city-quote-de", type: "text", role: "lead", color: "paper", italic: true, opacity: 0.5,
+          text: "„…kein unbeteiligter Zuschauer der sausenden Autos, des hin und her flutenden Verkehrs, sondern … zum aufnehmenden, mitwirkenden Bewegungselement geworden.“",
+          box: { left: "4vw", top: "58vh", width: "52vw" }, mobile: { box: { width: "88vw", marginTop: "3vh" } }, enter: { effect: "fade-in", delay: 2600 } },
+        { id: "city-quote-src", type: "text", role: "small", color: "paper", opacity: 0.7,
+          text: "Erich Mendelsohn on the Mossehaus, the Berliner Tageblatt building on a busy corner in Berlin. Lecture, Amsterdam, 1923. English translation made for this exhibition.",
+          box: { left: "4vw", bottom: "8vh", width: "52vw" }, mobile: { box: { width: "88vw", marginTop: "7vh" } }, enter: { effect: "fade-in", delay: 3400 } },
+        { id: "city-mauretania", type: "text", role: "body", color: "paper",
+          text: "In his studio the new façade had a nickname: *the Mauretania entering Berlin’s Westhafen*, after the great ocean liner. He repeated the joke in the same lecture and said it held as much truth as irony.",
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { hide: true }, enter: { effect: "fade-up", delay: 4000 } }
       ]
     },
     { id: "letters-1933", bg: "ink", ink: "paper", elements: [{ id: "letters-1933-title", type: "text", role: "title", color: "paper", text: "Letters to Luise · 1933", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
@@ -2652,13 +2655,20 @@ window.EXHIBITION = {
         }
         else if (e.key === "d" || e.key === "D") document.body.classList.toggle("debug");
       });
-      let ty = null;
-      window.addEventListener("touchstart", (e) => { ty = e.touches[0].clientY; }, { passive: true });
+      // touch: on a long screen, a swipe that STARTS at its end (or top) goes on at once; a swipe that only scrolls to the end does not
+      let ty = null, edge = null;
+      window.addEventListener("touchstart", (e) => {
+        ty = e.touches[0].clientY;
+        const c = this.current, el = c && c.def.scroll ? c.el : null;
+        edge = el ? { top: el.scrollTop <= 2, bottom: el.scrollTop + el.clientHeight >= el.scrollHeight - 2 } : null;
+      }, { passive: true });
       window.addEventListener("touchend", (e) => {
         if (ty == null || this.lb) return;
         const dy = ty - e.changedTouches[0].clientY;
         ty = null;
-        if (Math.abs(dy) > 50 && !this.scrollsInside(dy)) this.step(dy > 0 ? 1 : -1);
+        if (Math.abs(dy) <= 50) return;
+        const go = edge ? (dy > 0 ? edge.bottom : edge.top) : !this.scrollsInside(dy);
+        if (go) this.step(dy > 0 ? 1 : -1);
       });
       const rebind = () => { if (this.current && this.current.def.scroll) this.bindScroll(this.current); };
       window.addEventListener("resize", rebind);
