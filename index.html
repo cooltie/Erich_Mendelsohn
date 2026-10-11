@@ -1,0 +1,3156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamics and Function: The Line of Erich Mendelsohn</title>
+  <style>
+/* Engine base styles. Corner rounding is up to each exhibition's design. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+body { font-family: var(--font); -webkit-font-smoothing: antialiased; color: #fff; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+#root, .stage { position: fixed; inset: 0; overflow: hidden; }
+.screen { position: absolute; inset: 0; overflow: hidden; }
+.screen[hidden] { display: none; }
+
+.el { position: absolute; }
+.el .inner { position: relative; width: 100%; }
+.el-image .inner { height: 100%; }
+.el-image img { display: block; width: 100%; height: 100%; }
+.el-text .para { margin: 0; }
+.el-text .para.indent { text-indent: 2.4em; }
+.el-text strong { font-weight: 500; }
+.el-text em { font-style: italic; }
+.clickable { cursor: pointer; }
+
+.card { position: relative; }
+.card-img { aspect-ratio: 1; overflow: hidden; background: #111; }
+.card-img img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .7s cubic-bezier(.16,1,.3,1); }
+.card-label { margin-top: .7em; position: relative; display: inline-block; }
+
+/* hover effects (IDs listed in effects.js `hovers`) */
+.hover-lift, .hover-lift .card { transition: transform .5s cubic-bezier(.16,1,.3,1); }
+.hover-lift .card:hover, .hover-lift.el:hover .inner { transform: translateY(-8px); }
+.hover-zoom .card:hover img, .hover-zoom:hover img { transform: scale(1.05); }
+.hover-underline .card-label::after, .hover-underline .para::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -.15em; height: 1px; background: currentColor;
+  transform: scaleX(0); transform-origin: left; transition: transform .5s cubic-bezier(.16,1,.3,1);
+}
+.hover-underline .card:hover .card-label::after, .hover-underline:hover .para::after { transform: scaleX(1); }
+.hover-underline .para { position: relative; display: inline-block; }
+.hover-dim .cards .card, .hover-dim .inner > .card { transition: opacity .4s ease; }
+.hover-dim .inner:hover > .card { opacity: .35; }
+.hover-dim .inner > .card:hover { opacity: 1; }
+
+/* chrome */
+.chrome { position: fixed; inset: 0; pointer-events: none; z-index: 50; font-size: 13px; letter-spacing: .06em; }
+.lang { position: absolute; top: 24px; right: 28px; display: flex; pointer-events: auto; border: 1px solid rgba(255,255,255,.5); background: #000; }
+.lang-b { padding: 6px 10px; color: rgba(255,255,255,.6); }
+.lang-b.on { background: #fff; color: #000; }
+.ticks { position: absolute; right: 30px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; pointer-events: auto; transition: opacity .4s; }
+.ticks.hidden { opacity: 0; pointer-events: none; }
+.tick { position: relative; width: 12px; height: 12px; border: 1px solid var(--chrome-fg, #fff); opacity: .8; transition: background-color .9s ease, border-color .9s ease; }
+.tick::after { content: ""; position: absolute; inset: -8px -10px; } /* bigger hover / click area */
+.tick.on { background: var(--chrome-fg, #fff); opacity: 1; }
+.tick:focus:not(:focus-visible) { outline: none; } /* no focus ring after a mouse click */
+/* ex.nav labels, left of the squares: while the menu is hovered, only the current item and the hovered one */
+.tick-label { position: absolute; right: 18px; top: 50%; transform: translate(6px, -50%); white-space: nowrap; line-height: 1;
+  font-size: 17px; letter-spacing: .02em; color: var(--chrome-fg, #fff); background: var(--chrome-bg, #000); padding: 5px 8px; opacity: 0; pointer-events: none;
+  transition: opacity .35s ease, transform .5s cubic-bezier(.16,1,.3,1), color .25s; }
+.ticks:hover .tick.on .tick-label, .ticks .tick:hover .tick-label { opacity: 1; transform: translate(0, -50%); }
+.ticks .tick:hover .tick-label { opacity: 1; }
+
+/* cursor-square (theme.cursor: "square"): a square that inverts what is under it */
+.has-cursor-square, .has-cursor-square * { cursor: none !important; }
+.cursor-square { position: fixed; left: 0; top: 0; z-index: 100; width: 14px; height: 14px; margin: -7px 0 0 -7px; background: #fff;
+  mix-blend-mode: difference; pointer-events: none; opacity: 0; transition: opacity .2s, width .25s, height .25s, margin .25s; }
+.cursor-square.on { opacity: 1; }
+.cursor-square.over-link { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+
+/* walkthrough (type walkthrough): horizontal walk through the rooms, driven by vertical scrolling */
+.el-walkthrough { left: 0; top: 0; width: 100vw; }
+.wt-stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+.wt-strip { position: relative; display: flex; height: 100vh; width: max-content; will-change: transform; }
+.wt-intro { flex: none; display: flex; align-items: center; }
+.wt-photo { position: relative; flex: none; height: 100vh; overflow: hidden; }
+.wt-photo img { position: absolute; top: 0; height: 100%; object-fit: cover; will-change: transform; }
+.wt-text { position: relative; flex: none; align-self: flex-start; overflow-y: auto; overscroll-behavior: auto; scrollbar-width: none; will-change: opacity; }
+.wt-text::-webkit-scrollbar { display: none; }
+.wt-text.more { -webkit-mask-image: linear-gradient(#000 calc(100% - 10vh), transparent); mask-image: linear-gradient(#000 calc(100% - 10vh), transparent); }
+.wt-text.scrolled { -webkit-mask-image: linear-gradient(transparent 6vh, #000 12vh); mask-image: linear-gradient(transparent 6vh, #000 12vh); }
+.wt-text.more.scrolled { -webkit-mask-image: linear-gradient(transparent 6vh, #000 12vh, #000 calc(100% - 10vh), transparent); mask-image: linear-gradient(transparent 6vh, #000 12vh, #000 calc(100% - 10vh), transparent); }
+.wt-text .para { margin: 0; }
+.wt-text .para.indent { text-indent: 2.4em; }
+.wt-text em { font-style: italic; }
+.wt-artist { display: inline-block; margin-bottom: 3vh; position: relative; }
+.wt-text .wt-medium { margin-bottom: 3.5vh; }
+.wt-credits { margin-top: 3.5vh; }
+.wt-hud { position: absolute; left: 7vw; bottom: 6vh; z-index: 3; width: 22vw; }
+.wt-labels { position: relative; height: 1.5em; margin-bottom: 10px; }
+.wt-label { position: absolute; left: 0; top: 0; white-space: nowrap; }
+.wt-bar { height: 1px; background: rgba(255,255,255,.25); }
+.wt-bar-fill { height: 100%; background: #fff; transform-origin: 0 0; transform: scaleX(0); }
+.id-label { position: absolute; left: 14px; top: 12px; display: none; background: #fff; color: #000; padding: 3px 7px; font-size: 12px; letter-spacing: 0; }
+
+/* debug: press D */
+body.debug .id-label { display: block; }
+body.debug .el { outline: 1px dashed #ff3b6b; }
+body.debug .el::before, body.debug .card::before {
+  content: attr(data-id); position: absolute; left: 0; top: 0; z-index: 99; transform: translateY(-100%);
+  background: #ff3b6b; color: #fff; font: 11px/1 monospace; padding: 2px 4px; white-space: nowrap; pointer-events: none;
+}
+.card { outline-offset: 0; }
+body.debug .card { outline: 1px dotted #ff3b6b; }
+
+/* slot: placeholder for a future image, visible only in debug (D) */
+.slot { visibility: hidden; }
+body.debug .slot { visibility: visible; outline: 1px dashed rgba(255,255,255,.5); }
+body.debug .slot .inner { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.5); font: 12px/1.3 monospace; text-align: center; padding: 8px; }
+
+/* list with hover preview */
+.list-item { width: max-content; max-width: 100%; transition: opacity .35s ease, transform .5s cubic-bezier(.16,1,.3,1); }
+.el-list .inner:hover > .list-item { opacity: .35; }
+.el-list .inner > .list-item:hover { opacity: 1; transform: translateX(1.2vw); }
+.list-preview { position: absolute; z-index: 4; pointer-events: none; overflow: hidden; clip-path: inset(0 0 100% 0); transition: clip-path .6s cubic-bezier(.16,1,.3,1); }
+.list-preview.on { clip-path: inset(0 0 0 0); }
+.list-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* scrollable screen (def.scroll) */
+.screen.scrollable { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; overscroll-behavior: none; }
+.screen.scrollable::-webkit-scrollbar { display: none; }
+
+/* pin: sticky layer, see Engine.pinHost */
+.pin-track { position: absolute; left: 0; width: 100%; z-index: 2; pointer-events: none; }
+.pin-layer { position: sticky; top: 0; height: 100vh; width: 100%; }
+.pin-layer > .el { pointer-events: auto; }
+.pin-layer > .el-blobzoom, .el-blobzoom { pointer-events: none; }
+
+/* blob-zoom layers (see Engine.build_blobzoom) */
+.bz-win { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.bz-img { position: absolute; display: block; object-fit: cover; transform-origin: 0 0; will-change: transform; }
+
+/* info-bubble (ex.info): swaying circle of texture with "i", bottom right; circle-open: it grows over the screen */
+.info-bubble { position: absolute; right: 26px; bottom: 26px; width: 64px; height: 64px; pointer-events: auto; overflow: hidden;
+  clip-path: circle(50%); animation: info-sway 6s ease-in-out infinite; }
+.info-bubble[hidden] { display: none; }
+.info-bubble { transition: opacity .8s ease; }
+.info-bubble.during-scene { opacity: 0; pointer-events: none; }
+.info-tex { position: absolute; inset: -14%; background-size: cover; background-position: center; animation: info-drift 9s ease-in-out infinite;
+  transition: scale .6s cubic-bezier(.16,1,.3,1); }
+.info-bubble:hover .info-tex { scale: 1.18; }
+.info-i { position: relative; display: flex; align-items: center; justify-content: center; height: 100%;
+  font: 500 28px/1 var(--font); color: #000; }
+@keyframes info-sway { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-5px) rotate(6deg); } }
+@keyframes info-drift { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(-14deg) scale(1.08); } }
+.info-open { position: fixed; inset: 0; z-index: 90; background-size: cover; background-position: center; pointer-events: none; }
+
+/* line (type line): SVG drawing */
+.el-line svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* button / buttons: pill (solid) or underlined link; --btn-c is the colour */
+.btn { display: inline-flex; align-items: center; gap: .55em; cursor: pointer; user-select: none; white-space: nowrap; text-decoration: none; }
+.btn-solid { padding: .62em 1.45em .68em; border-radius: 999px; border: 1.5px solid var(--btn-c); background: var(--btn-c); color: var(--c-paper, #fff); transition: background-color .35s ease, color .35s ease; }
+.btn-solid:hover, .btn-solid:focus-visible { background: transparent; color: var(--btn-c); }
+.btn-link { color: var(--btn-c); padding: .62em 0 .5em; background: linear-gradient(currentColor, currentColor) 0 calc(100% - .32em) / 100% 1.5px no-repeat; transition: background-size .45s cubic-bezier(.16,1,.3,1); }
+.btn-link:hover, .btn-link:focus-visible { background-size: 0% 1.5px; background-position: 100% calc(100% - .32em); }
+.btn-arrow { display: inline-block; transition: transform .4s cubic-bezier(.16,1,.3,1); }
+.btn:hover .btn-arrow { transform: translateX(.25em); }
+.btn:focus:not(:focus-visible) { outline: none; }
+.btn .btn-label { color: inherit; }
+
+/* counter */
+.counter-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.counter-line { display: block; width: 100%; height: 8px; margin: .5em 0 .8em; overflow: visible; }
+.counter-label { margin: 0; }
+
+/* line-across: transition line over everything */
+.line-across { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60; pointer-events: none; overflow: visible; }
+
+/* sound toggle (type sound) */
+.sound-toggle .inner { display: flex; align-items: center; gap: .6em; }
+.sound-mark { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid currentColor; transition: background-color .3s; }
+.sound-toggle.on .sound-mark { background: var(--c-accent, currentColor); border-color: var(--c-accent, currentColor); }
+.sound-toggle .sound-label { color: inherit; }
+.sound-toggle:focus:not(:focus-visible) { outline: none; }
+
+/* image credit (image.credit): "i" at the bottom-right corner, opens the caption */
+.credit-i { position: absolute; right: 10px; bottom: 10px; z-index: 3; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--c-ink, currentColor); color: var(--c-ink, currentColor); background: var(--c-paper, #fff);
+  font: 500 14px/1 var(--font); display: flex; align-items: center; justify-content: center; transition: background-color .3s, color .3s, border-color .3s; }
+.credit-i:hover, .credit-i.on { background: var(--c-ink, #000); color: var(--c-paper, #fff); }
+.credit-i:focus:not(:focus-visible) { outline: none; }
+.credit-panel { position: absolute; left: 0; right: 0; bottom: 0; max-height: 100%; overflow-y: auto; z-index: 2; padding: 14px 46px 14px 16px; scrollbar-width: thin;
+  background: var(--c-paper, #fff); border: 1.5px solid var(--c-ink, #000); }
+.credit-panel[hidden] { display: none; }
+.credit-line { margin: 0; }
+.credit-line + .credit-line { margin-top: .5em; }
+
+/* narrow screens: menu squares hidden (swipe to move), so they never sit on top of the text */
+@media (max-width: 700px) { .ticks { display: none; } }
+
+/* route (type route) */
+.route .inner { position: relative; }
+.route svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.route-stop { position: absolute; width: 0; height: 0; }
+.route-dot { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--c-paper, #fff); border: 2px solid var(--c-ink, #000); }
+.route-stop.rupture .route-dot { border-color: var(--c-accent, red); }
+.route-stop.current .route-dot { background: var(--c-accent, red); border-color: var(--c-accent, red); width: 16px; height: 16px; left: -8px; top: -8px; }
+.route-label { position: absolute; white-space: nowrap; }
+.route-label p { margin: 0; }
+.route-note { margin-top: .3em !important; }
+.side-above .route-label { left: -6px; bottom: 18px; }
+.side-below .route-label { left: -6px; top: 18px; }
+.side-right .route-label { left: 18px; top: 50%; transform: translateY(-50%); }
+.side-left .route-label { right: 18px; top: 50%; transform: translateY(-50%); text-align: right; }
+.route-end { position: absolute; margin: 0; white-space: nowrap; transform: translate(12px, -50%); }
+.route-tick { position: absolute; white-space: nowrap; }
+
+/* theme.grid: column lines under every screen */
+.grid-bg { position: absolute; top: 0; bottom: 0; display: grid; pointer-events: none; z-index: 0; }
+.grid-bg > div { border-left: 1px solid var(--chrome-fg, #000); border-right: 1px solid var(--chrome-fg, #000); opacity: var(--grid-o, .08); transition: border-color .9s ease; }
+.screen { z-index: 1; }
+
+/* image caption (image.caption) */
+.img-caption { position: absolute; left: 0; top: 100%; margin: .7em 0 0; max-width: 100%; }
+.img-circle { aspect-ratio: 1; }
+.img-circle .inner { height: 100%; }
+.img-circle img { border-radius: 50%; }
+
+/* lightbox (theme.zoom / image.zoom) */
+img.zoomable { cursor: zoom-in; }
+.lb { position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; background: var(--c-paper, #fff); color: var(--c-ink, #000); }
+.lb-stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4vh 4vw 0; touch-action: none; cursor: zoom-out; }
+.lb-img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: 50% 50%; user-select: none; cursor: zoom-in; will-change: transform; }
+.lb.zoomed .lb-img { cursor: grab; }
+.lb.zoomed .lb-img:active { cursor: grabbing; }
+.lb-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 2vw; padding: 2vh 4vw 3vh; padding-bottom: calc(3vh + env(safe-area-inset-bottom, 0px)); }
+.lb-info { min-width: 0; max-width: 72ch; }
+.lb-text { margin: 0 0 .8em; }
+.lb-text[hidden] { display: none; }
+.lb-caption, .lb-credit-line { margin: 0; }
+.lb-credit { margin-top: .5em; display: flex; flex-wrap: wrap; column-gap: 1.2em; }
+.lb-controls { display: flex; align-items: center; gap: 8px; flex: none; }
+.lb-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--c-ink, #000); font: 400 18px/1 var(--font); display: flex; align-items: center; justify-content: center; transition: background-color .25s, color .25s; }
+.lb-btn:hover, .lb-btn:focus-visible { background: var(--c-ink, #000); color: var(--c-paper, #fff); }
+.lb-btn[hidden] { display: none; }
+.lb-count { min-width: 4.5em; text-align: center; }
+@media (max-width: 700px) {
+  .lb-bar { flex-direction: column; align-items: stretch; }
+  .lb-credit { display: none; }
+}
+.img-circle .credit-panel { right: auto; width: max(100%, 300px); max-height: none; }
+
+/* chrome sound toggle (ex.soundToggle) */
+.chrome-sound { position: absolute; top: 5vh; right: 4vw; pointer-events: auto; display: flex; align-items: center; gap: .6em; color: var(--chrome-fg, #fff); transition: color .9s ease; }
+.chrome-sound .sound-label { color: inherit; }
+@media (max-width: 700px) { .chrome-sound { top: 4vh; right: 6vw; } }
+
+/* route-mini (route.mini): a small copy of the route with a "you are here" marker */
+.route-mini svg path { stroke-width: 1.2px; }
+.route-mini .route-mini-dot { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--chrome-fg, #000); }
+.route-mini .route-mini-dot.rupture { background: var(--c-accent, red); }
+.route-here { position: absolute; width: 0; height: 0; }
+.route-here::before { content: ""; position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--c-accent, red); }
+.route-here-label { position: absolute; left: 12px; top: 6px; white-space: nowrap; }
+.route-mini.clickable { cursor: pointer; }
+.route-mini .route-mini-label { position: absolute; right: 0; top: calc(100% + 10px); white-space: nowrap; text-align: right; }
+.sound-label { display: inline-grid; }
+.sound-label > span { grid-area: 1 / 1; }
+.sound-toggle .sl-on, .sound-toggle.on .sl-off { visibility: hidden; }
+.sound-toggle.on .sl-on { visibility: visible; }
+/* mat: a white passe-partout drawn outside the image (box-shadow), so the image keeps its exact position */
+.mat-white .inner { box-shadow: 0 0 0 var(--mat, 3.3vw) #fff, 0 1px 0 calc(var(--mat, 3.3vw) + 1px) rgba(0,0,0,.06); }
+.el-line, .pin-layer > .el-line, .el-line svg { pointer-events: none; }
+
+/* walkthrough on phones (walkList) */
+.el-walkthrough.wt-list { position: relative; left: 0; top: 0; width: 100vw; padding: 12vh 6vw 10vh; }
+.wt-list .inner { display: flex; flex-direction: column; gap: 9vh; }
+.wt-list-head, .wt-list-item { display: flex; flex-direction: column; gap: 1.2vh; }
+.wt-list-item img { display: block; width: 100%; height: auto; margin-bottom: 1.5vh; }
+.wt-list .para { margin: 0; }
+
+/* walkthrough: slides inside a photo (items[].slides) */
+.wt-slides { position: absolute; top: 0; height: 100%; will-change: transform; }
+.wt-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
+.wt-slides img.on { opacity: 1; }
+.wt-slide-ctl { position: absolute; left: 2.4vw; bottom: 3vh; z-index: 2; display: flex; align-items: center; gap: 12px; }
+.wt-slide-btn { width: 44px; height: 44px; border-radius: 50%; background: rgba(21,20,19,.55); color: #fff; font: 400 20px/1 var(--font); display: flex; align-items: center; justify-content: center; transition: background-color .3s; }
+.wt-slide-btn:hover, .wt-slide-btn:focus-visible { background: rgba(21,20,19,.9); }
+.wt-slide-count { min-width: 3em; text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+/* walkthrough: dots navigation (nav: "dots"), bottom right */
+.wt-hud.wt-hud-dots { pointer-events: none; left: auto; right: 4vw; bottom: 5vh; width: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.wt-hud-dots .wt-labels { width: 40vw; text-align: right; }
+.wt-hud-dots .wt-label { left: auto; right: 0; }
+.wt-dots { display: flex; gap: 14px; pointer-events: auto; }
+.wt-dot { position: relative; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--chrome-fg, #fff); }
+.wt-dot::after { content: ""; position: absolute; inset: -8px; }
+.wt-dot-fill { position: absolute; inset: 2px; border-radius: 50%; background: var(--c-accent, #fff); opacity: 0; }
+.wt-intro .wt-intro-text { max-width: 36vw; }
+.wt-hud-dots .wt-label { text-shadow: 0 1px 8px rgba(0,0,0,.55); }
+
+/* sound icon: speaker, waves when on, a cross when off. Hidden by default; the chrome toggle uses it on phones */
+.sound-icon { display: none; width: 26px; height: 26px; }
+.sound-icon svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sound-icon .si-on { display: none; stroke: var(--c-accent, currentColor); }
+.sound-toggle.on .sound-icon .si-on { display: inline; }
+.sound-toggle.on .sound-icon .si-off { display: none; }
+@media (max-width: 700px) {
+  .chrome-sound { top: calc(4vh - 6px); }
+  .chrome-sound .sound-mark, .chrome-sound .sound-label { display: none; }
+  .chrome-sound .sound-icon { display: block; }
+}
+
+/* flow screen (screen.flow, usually on phones): elements stand one under another and the screen scrolls.
+   Only the box's width, margins and order count; positions are ignored. */
+.screen.flow:not([hidden]) { display: flex; flex-direction: column; align-items: flex-start; padding: 4vh 6vw 10vh; }
+.screen.flow > .el { position: relative !important; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important; flex: none; min-height: 0; max-width: 100%; margin-top: 5vh; }
+.screen.flow > .el:first-child { margin-top: 0; }
+.screen.flow .img-caption { position: static; }
+
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+/* Dynamics and Function: The Line of Erich Mendelsohn. Concept project (fictional museum).
+   Engine: ../../constructor/engine/. Press D in the browser for IDs. Text: {en}.
+
+   Design system (Bauhaus): strict 12-column grid + Mendelsohn's free line over it.
+   Grid: margin 4vw, gutter 1.6vw → column 6.2vw, column step 7.8vw (column k starts at 4 + 7.8·k vw).
+   Colours: ink, paper (off-white), accent (red), blue, stone (warm, Palestine room), grey. Font: Jost (OFL).
+   Buttons: pills (black / red / blue) and red underlined links. */
+
+// Einstein Tower, our own line drawing (after the 1920 sketches). viewBox 0 0 1000 640. Not on the cover any more; kept for H2 / the finale.
+const TOWER = [
+  // ground, one long breath
+  "M 110 560 C 360 553, 680 553, 975 560",
+  // dome and cornice
+  "M 300 158 A 50 50 0 0 1 400 158",
+  "M 288 160 L 412 160",
+  // tower, front: almost upright, then it swells into the plinth
+  "M 300 166 C 296 232, 292 290, 282 330 C 270 380, 232 418, 172 440 C 142 452, 128 500, 126 560",
+  // tower, back: swings into the long laboratory body
+  "M 400 166 C 404 232, 410 290, 424 322 C 446 360, 502 372, 584 374 L 800 378 C 860 380, 900 410, 906 470 L 908 560",
+  // eye-shaped windows of the tower
+  "M 322 208 C 336 198, 364 198, 378 208 C 364 218, 336 218, 322 208",
+  "M 316 262 C 334 248, 366 248, 384 262 L 382 280 C 366 270, 334 270, 318 282 Z",
+  // entrance: canopy and steps
+  "M 186 472 C 212 448, 262 446, 292 468",
+  "M 166 528 L 300 528",
+  "M 156 544 L 312 544",
+  // window bands of the laboratory
+  "M 604 420 C 680 410, 790 410, 872 424",
+  "M 606 440 C 682 430, 790 430, 870 444",
+  // speed lines: the building moves
+  "M 470 332 C 560 342, 660 348, 780 348",
+  "M 520 302 C 600 312, 690 316, 790 316"
+];
+
+// 01: visits per week over the four months (fictional data, concept project). Thousands.
+const WEEKLY = [9.2, 15.8, 14.1, 12.0, 11.3, 10.9, 12.6, 16.9, 15.2, 13.0, 12.1, 11.8, 12.9, 13.7, 15.4, 18.6, 22.3];
+// smooth line through the points (Catmull-Rom → Bézier), viewBox 0 0 1000 300
+function chartPath(data, w, h, pad) {
+  const max = Math.max(...data), n = data.length;
+  const pts = data.map((v, i) => [(i / (n - 1)) * w, h - pad - (v / max) * (h - 2 * pad)]);
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C ${c1.map((x) => x.toFixed(1)).join(" ")}, ${c2.map((x) => x.toFixed(1)).join(" ")}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+// Room 2: the Einstein Tower's outline, traced from the photo (frame 1000 × 690, same crop as sketch and photo)
+const ET_LINE = [
+  "M -101 673 C -4 672, 285 671, 479 671 C 672 671, 961 672, 1058 673",
+  "M -78 666 C -70 654, -47 622, -31 593 C -16 565, 3 524, 15 497 C 27 469, 33 451, 38 428 C 43 405, 38 375, 44 359 C 50 342, 49 335, 73 328 C 97 321, 144 316, 189 317 C 233 319, 297 330, 340 338 C 382 346, 426 361, 444 366",
+  "M 21 414 C 59 412, 167 407, 247 404 C 327 401, 442 398, 502 397 C 562 396, 589 397, 606 397",
+  "M 444 366 C 442 351, 435 306, 435 276 C 434 246, 435 210, 438 186 C 441 162, 449 145, 455 131 C 462 117, 469 107, 479 100 C 488 93, 508 91, 513 90",
+  "M 513 90 C 513 83, 496 59, 513 52 C 531 44, 598 39, 618 45 C 637 51, 627 82, 629 90",
+  "M 513 90 C 527 90, 567 85, 594 90 C 621 94, 654 105, 676 117 C 697 130, 708 147, 722 166 C 735 184, 749 204, 757 228 C 764 252, 763 279, 768 310 C 773 342, 780 375, 786 414 C 791 453, 800 523, 803 545",
+  "M 803 545 C 818 549, 867 553, 896 566 C 925 578, 952 604, 977 621 C 1002 638, 1035 658, 1046 666",
+  "M 73 593 C 74 583, 69 546, 79 531 C 88 517, 113 508, 131 507 C 149 506, 178 510, 189 524 C 199 539, 194 582, 195 593",
+  "M 287 593 C 288 583, 281 546, 293 531 C 306 517, 340 507, 363 507 C 386 507, 419 517, 432 531 C 446 546, 442 583, 444 593",
+  "M 119 400 C 121 396, 122 381, 131 376 C 140 371, 160 366, 171 369 C 183 372, 196 389, 200 393",
+  "M 311 421 C 313 416, 318 398, 328 393 C 338 388, 359 386, 368 390 C 378 393, 383 410, 386 414",
+  "M 728 266 C 730 263, 733 250, 739 248 C 745 247, 759 254, 762 255",
+  "M 739 338 C 741 335, 745 323, 751 321 C 757 319, 770 327, 774 328",
+  "M 757 421 C 759 418, 762 405, 768 404 C 774 402, 788 409, 791 411",
+  "M 774 514 C 776 511, 780 499, 786 497 C 791 495, 805 503, 809 504"
+];
+
+// The route: where he lived and worked. year × latitude (°N). Used by The Route and the small map in each room.
+const ROUTE_STOPS = [
+  { label: "Allenstein", note: "1887 · born in East Prussia", year: 1887, value: 53.8, side: "above" },
+  { label: "Munich", note: "1910 · studies architecture", year: 1910, value: 48.1, side: "below" },
+  { label: "Berlin", note: "1918 · back from the front", year: 1918, value: 52.5, side: "above" },
+  { label: "London", note: "1933 · leaves Germany", year: 1933, value: 51.5, side: "above", break: true },
+  { label: "Jerusalem", note: "1935 · opens an office", year: 1935, value: 31.8, side: "below" },
+  { label: "New York", note: "1941 · arrives in the USA", year: 1941, value: 40.7, side: "above" },
+  { label: "San Francisco", note: "1945 · settles in California", year: 1945, value: 37.8, side: "below" }
+];
+const ROUTE_END = { year: 1953, value: 37.8, label: "† 1953" };
+// small map in the corner of each room: the route with a "you are here" marker; click opens The Route
+const miniRoute = (id, at, atLabel, pin) => ({ id, type: "route", mini: true, years: [1885, 1955], values: [25, 57], stops: ROUTE_STOPS, end: ROUTE_END,
+  at, atLabel, goto: "route", pin, box: { right: "4vw", top: "10vh", width: "13vw", height: "5vh" }, mobile: { hide: true },
+  enter: { effect: "route", duration: 1800, delay: 300 } });
+
+window.EXHIBITION = {
+  meta: { title: { en: "Dynamics and Function: The Line of Erich Mendelsohn" }, langs: ["en"], defaultLang: "en" },
+
+  theme: {
+    bg: "paper",
+    ink: "ink",
+    zoom: true,
+    pencil: true,
+    grid: { columns: 12, margin: "4vw", gutter: "1.6vw", opacity: 0.09, mobile: { columns: 4, margin: "6vw", gutter: "4vw" } },
+    fontStack: '"Jost", "Futura", "Century Gothic", Arial, sans-serif',
+    fonts: [
+      { family: "Jost", weight: 400, src: [{ url: "assets/fonts/Jost-400-Book.woff2", format: "woff2" }] },
+      { family: "Jost", weight: 400, style: "italic", src: [{ url: "assets/fonts/Jost-400-BookItalic.woff2", format: "woff2" }] },
+      { family: "Jost", weight: 500, src: [{ url: "assets/fonts/Jost-500-Medium.woff2", format: "woff2" }] },
+      { family: "Jost", weight: 500, style: "italic", src: [{ url: "assets/fonts/Jost-500-MediumItalic.woff2", format: "woff2" }] }
+    ],
+    colors: {
+      ink: "#151413",
+      paper: "#EDE8DC",
+      accent: "#C4685A",
+      blue: "#565F8C",
+      stone: "#C9B08A",
+      grey: "#7A746A",
+      light: "#D8D2C4",
+      white: "#F2EEE5"
+    },
+    type: {
+      display: { size: "clamp(52px,min(7.6vw,13.5vh),150px)", weight: 500, lh: "0.88", ls: "-0.03em", color: "ink" },
+      title: { size: "clamp(24px,min(2.9vw,5.2vh),54px)", weight: 400, lh: "1.08", ls: "-0.01em", color: "ink" },
+      lead: { size: "clamp(19px,min(1.8vw,3.3vh),32px)", weight: 400, lh: "1.25", color: "ink" },
+      body: { size: "clamp(16px,1.2vw,21px)", weight: 400, lh: "1.45", color: "ink" },
+      stat: { size: "clamp(40px,min(4.6vw,8vh),92px)", weight: 500, lh: "0.9", ls: "-0.03em", color: "ink" },
+      button: { size: "clamp(16px,1.35vw,24px)", weight: 400, lh: "1", ls: "0.005em" },
+      numeral: { size: "clamp(64px,min(10vw,17vh),190px)", weight: 500, lh: "0.85", ls: "-0.04em", color: "ink" },
+      small: { size: "clamp(14px,1vw,18px)", weight: 400, lh: "1.45", color: "grey" },
+      label: { size: "clamp(12px,0.85vw,15px)", weight: 500, lh: "1.2", ls: "0.14em", case: "uppercase", color: "ink" },
+      caption: { size: "clamp(11px,0.85vw,15px)", weight: 400, lh: "1.4", color: "grey" }
+    }
+  },
+
+  soundToggle: { off: "Sound off", on: "Sound on", role: "label" },
+
+  nav: [
+    { label: { en: "Cover" }, screens: ["cover", "about"] },
+    { label: { en: "The Route" }, screens: ["route"] },
+    { label: { en: "The Sketch" }, screens: ["sketch", "letter-1917"] },
+    { label: { en: "Einstein Tower" }, screens: ["einstein-tower", "manifesto"] },
+    { label: { en: "The Dynamic City" }, screens: ["dynamic-city", "city-walk"] },
+    { label: { en: "Letters to Luise · 1933" }, screens: ["letters-1933"] },
+    { label: { en: "Architecture in Exile" }, screens: ["exile"] },
+    { label: { en: "Finale" }, screens: ["silence", "finale"] },
+    { label: { en: "After the exhibition" }, screens: ["after", "voices"] },
+    { label: { en: "Credits" }, screens: ["credits"] }
+  ],
+
+  screens: [
+    /* 00 Cover: the line draws the Einstein Tower, then the title and the question. */
+    {
+      id: "cover",
+      nav: false,
+      elements: [
+        { id: "cover-label", type: "text", role: "label", text: "Online exhibition · Archive",
+          box: { left: "4vw", top: "5vh", width: "30vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } },
+          enter: { effect: "fade-in", delay: 200 } },
+        { id: "cover-sketch", type: "image", src: "assets/img/einstein-tower-sketch-1920.webp", fit: "contain",
+          alt: "Erich Mendelsohn, Einstein Tower, sketch from the north-west, 1920: pencil and yellow chalk on paper",
+          caption: "*Einstein Tower, sketch from the north-west*, 1920 · pencil and yellow chalk on paper",
+          text: "The tower and its low laboratory in a few strokes of chalk. The whole building seems to lean forward, as if it were about to move. Room 2 follows this sheet to the building that stands in Potsdam today.",
+          credit: [
+            "**Einstein Tower, sketch from the north-west, 1920**",
+            "Erich Mendelsohn. Pencil and yellow chalk on paper.",
+            "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 140. Photo: Dietmar Katz.",
+            "Public Domain Mark 1.0. Cut out along the edge of the sheet; contrast of the dark strokes increased."
+          ],
+          box: { left: "46.5vw", top: "13vh", width: "47.5vw" }, mobile: { box: { left: "6vw", top: "22vh", width: "88vw" }, caption: null }, // on phones the title runs over the sheet: the caption stays in the "i"
+          enter: { effect: "wipe", from: "left", duration: 2600, feel: "soft", delay: 300 } },
+        { id: "cover-question", type: "text", role: "title",
+          text: "Why does this building look like it’s moving?",
+          box: { left: "4vw", top: "15vh", width: "29vw" }, mobile: { box: { left: "6vw", top: "11vh", width: "80vw" } },
+          enter: { effect: "words-in", stagger: 60, speed: "slow", delay: 2600 } },
+        { id: "cover-title", type: "text", role: "display", paragraphs: ["Dynamics", "and Function"], gap: 0,
+          box: { left: "4vw", top: "50vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "58vh", width: "88vw" } },
+          enter: { effect: "wipe", from: "left", speed: "slow", delay: 900 } },
+        { id: "cover-subtitle", type: "text", role: "title", text: "The Line of Erich Mendelsohn",
+          box: { left: "4vw", top: "calc(50vh + 1.76 * clamp(52px,min(7.6vw,13.5vh),150px) + 4vh)", width: "45vw" },
+          mobile: { box: { left: "6vw", top: "calc(58vh + 1.76 * 52px + 2vh)", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 1500 } },
+        { id: "cover-actions", type: "buttons",
+          items: [
+            { text: "Walk the line", goto: "about", variant: "solid", color: "ink", arrow: true },
+            { text: "Explore freely", goto: "route", variant: "link", color: "ink" }
+          ],
+          box: { left: "4vw", bottom: "7vh" }, mobile: { box: { left: "6vw", bottom: "12vh" } },
+          enter: { effect: "fade-up", delay: 3800 } }
+      ]
+    },
+
+    /* Skeleton: screens to build next. */
+    /* About: what this site is. The exhibition ran for four months and has closed; the archive stays open. */
+    {
+      id: "about",
+      line: { color: "ink" },
+      elements: [
+        { id: "about-label", type: "text", role: "label", text: "About this archive",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        { id: "about-title", type: "text", role: "title", text: "The exhibition has ended. The line continues.",
+          box: { left: "4vw", top: "14vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "10vh", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 200 } },
+        { id: "about-text", type: "text", role: "lead", gap: "0.8em",
+          paragraphs: [
+            "For four months, *Dynamics and Function* showed the work of Erich Mendelsohn (1887–1953) as one continuous line: from small sketches drawn to music, through the buildings that set the cities of the 1920s in motion, to exile in London, Jerusalem and San Francisco.",
+            "The exhibition has ended. This site keeps it going: the same rooms in the same order, with every sheet and letter you can enlarge. Walk it from start to finish in about seven minutes, or open the route and go where you like."
+          ],
+          box: { left: "4vw", top: "30vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "24vh", width: "88vw" }, role: "body" },
+          enter: { effect: "fade-up", delay: 500 } },
+        { id: "about-concept", type: "text", role: "small",
+          text: "A concept project. The museum and the exhibition are fictional; the drawings, letters and buildings are real.",
+          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { left: "6vw", bottom: "5vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 1200 } }
+      ]
+    },
+
+    /* The Route: his life as one line. Across: the years; up and down: how far north he lived (latitude). */
+    {
+      id: "route",
+      elements: [
+        { id: "route-label", type: "text", role: "label", text: "The Route",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        { id: "route-title", type: "text", role: "title", text: "From Allenstein to San Francisco.",
+          box: { left: "4vw", top: "11vh", width: "60vw" }, mobile: { box: { left: "6vw", top: "8vh", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 200 } },
+        { id: "route-how", type: "text", role: "small", text: "Across: the years. Up and down: how far north he lived.",
+          box: { left: "4vw", top: "18vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "13vh", width: "88vw" }, text: "Down: the years. Across: how far north he lived." },
+          enter: { effect: "fade-in", delay: 500 } },
+        { id: "route-line", type: "route", years: [1885, 1955], values: [25, 57], ticks: [1890, 1900, 1910, 1920, 1930, 1940, 1950],
+          stops: ROUTE_STOPS,
+          end: ROUTE_END,
+          box: { left: "4vw", top: "32vh", width: "86vw", height: "48vh" },
+          mobile: { vertical: true, box: { left: "30vw", top: "21vh", width: "40vw", height: "62vh" },
+            stops: [
+              { label: "Allenstein", note: "1887", year: 1887, value: 53.8, side: "right" },
+              { label: "Munich", note: "1910", year: 1910, value: 48.1, side: "right" },
+              { label: "Berlin", note: "1918", year: 1918, value: 52.5, side: "right" },
+              { label: "London", note: "1933", year: 1933, value: 51.5, side: "right", break: true },
+              { label: "Jerusalem", note: "1935", year: 1935, value: 31.8, side: "left" },
+              { label: "New York", note: "1941", year: 1941, value: 40.7, side: "right" },
+              { label: "San Francisco", note: "1945", year: 1945, value: 37.8, side: "left" }
+            ] },
+          enter: { effect: "route", duration: 5200, delay: 700 } }
+      ]
+    },
+    /* Room 1 · The Sketch: small, fast sheets, many drawn to music. Sound: cello (Bach), when sound is on. */
+    {
+      id: "sketch",
+      line: { color: "ink" },
+      sound: { src: "assets/audio/bach-bwv1007-prelude.mp3", volume: 0.5 },
+      // phones: all sheets one under another, in order of the years; the room scrolls to its end before the next screen
+      mobile: { scroll: true, flow: true },
+      elements: [
+        { id: "sketch-label", type: "text", role: "label", text: "Room 1 · The Sketch",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        { id: "sketch-title", type: "text", role: "title", text: "He thought with a pencil.",
+          box: { left: "4vw", top: "11vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "8vh", width: "88vw", order: "1", marginTop: "2vh" } },
+          enter: { effect: "fade-up", delay: 150 } },
+        { id: "sketch-text", type: "text", role: "body",
+          text: "The sheets are small, a hand’s width across, and the lines are quick. In Munich he had met the painters of Der Blaue Reiter, and like them he trusted a line to carry feeling. Many sheets were drawn to music. In 1917 his searchlight unit was sent to the Eastern Front; in the white nights of the Baltic summer there was nothing to light, so he drew.",
+          box: { left: "4vw", top: "24vh", width: "27vw" }, mobile: { box: { left: "6vw", top: "14vh", width: "88vw", order: "2", marginTop: "2.5vh" } },
+          enter: { effect: "fade-up", delay: 400 } },
+        { id: "sketch-1914", type: "image", src: "assets/img/sketch-music-1914.webp",
+          alt: "Musical sketch, 1914: a long horizontal building in red pencil under an arc, a smaller variant in grey below, handwriting on the left",
+          text: "A long building pulled flat under one great arc, in red pencil, with a quieter grey version below. In the corner he wrote down what was playing: *Bach. Cellosonate*. Nothing here is a plan yet. The building is heard before it is designed.",
+          caption: "*Musical sketches*, 1914 · graphite and coloured pencil on tracing paper · 9.8 × 17.2 cm",
+          credit: ["**Musikalische Skizzen**, 1914", "Erich Mendelsohn. Graphite, coloured pencil on tracing paper, 9.8 × 17.2 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 617.", "Public Domain Mark 1.0."],
+          box: { left: "35.2vw", top: "11vh", width: "min(37.4vw, 54vh)" }, mobile: { box: { width: "88vw", order: "4" } },
+          enter: { effect: "fade-up", speed: "slow", delay: 300 } },
+        { id: "sketch-1920-music", type: "image", src: "assets/img/sketch-music-1920.webp",
+          alt: "Musical sketch, 1920: two perspectives of stepped architectural masses in soft pencil",
+          text: "Two views of stepped masses in soft pencil, rubbed and drawn again. By 1920 the musical sketch had become his way of working: a fast record of a form before there is a site, a client or a plan.",
+          caption: "*Musical sketches*, 1920 · pencil · 9.6 × 16 cm",
+          credit: ["**Musikalische Skizzen, zwei Perspektiven architektonische Strukturen**, 1920", "Erich Mendelsohn. Pencil on paper, 9.6 × 16.0 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 808. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
+          box: { left: "74.6vw", top: "21vh", width: "min(20vw, 34vh)" }, mobile: { box: { width: "88vw", order: "6" } },
+          enter: { effect: "fade-up", speed: "slow", delay: 700 } },
+        { id: "sketch-1920-free", type: "image", src: "assets/img/sketch-free-1920.webp",
+          alt: "Sketch, free design, about 1920: a long building with rounded towers and window bands in black ink",
+          text: "Pen and ink, the decisive line: rounded towers, bands of windows, a long body running out of the frame. Luise wrote to him that she saw the finished form in his ink contours, and found the restless ink drawings too much like Kandinsky.",
+          caption: "*Sketch, free design*, about 1920 · pen and black ink on tracing paper · 7.6 × 17 cm",
+          credit: ["**Skizze, Freier Entwurf**, about 1920", "Erich Mendelsohn. Pen and black ink on tracing paper, 7.6 × 17.0 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 286. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
+          box: { left: "74.6vw", bottom: "9vh", width: "min(20vw, 40vh)" }, mobile: { box: { width: "88vw", order: "7" } },
+          enter: { effect: "fade-up", speed: "slow", delay: 1100 } },
+        miniRoute("sketch-map", 1917, "1914–1920 · Munich, Berlin, the front", null),
+        { id: "sketch-front-1917", type: "image", src: "assets/img/sketch-front-1917.webp",
+          alt: "Imaginary sketch from the Russian front, 1917: a long building with a curved end and a row of hanging arches, in black ink",
+          text: "Drawn at the Eastern Front in 1917, where his unit had little to do in the bright Baltic summer. A hall with a swelling end and a row of hanging arches: no site, no client, only the idea of a building held in tension.",
+          caption: "*Imaginary sketches from the Russian front*, 1917 · black ink on tracing paper · 7 × 20.8 cm",
+          credit: ["**Imaginäre Skizzen von der russischen Front**, 1917", "Erich Mendelsohn. Pen and black ink on tracing paper, 7.0 × 20.8 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 282. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
+          box: { left: "35.2vw", top: "56vh", width: "min(37.4vw, 72vh)" }, mobile: { box: { width: "88vw", order: "5" } },
+          enter: { effect: "fade-up", speed: "slow", delay: 1000 } },
+        { id: "sketch-music-credit", type: "text", role: "small",
+          text: "Sound: J. S. Bach, Cello Suite No. 1, BWV 1007, Prelude. Recording: Classicals.de, conducted by Philip Milman (classicals.de), CC BY 3.0.",
+          box: { left: "4vw", bottom: "4vh", width: "27vw" }, mobile: { box: { width: "88vw", order: "8", marginTop: "7vh" } }, enter: { effect: "fade-in", delay: 1600 } },
+        { id: "sketch-portrait", type: "image", shape: "circle", src: "assets/img/portrait-mendelsohn.webp", focus: "55% 35%",
+          alt: "Erich Mendelsohn, studio portrait: three-quarter view, round glasses, tweed jacket",
+          caption: "Erich Mendelsohn",
+          text: "A studio portrait from Munich, signed in ink at the lower left. Mendelsohn studied there and found his first circle among painters and stage designers before he had built anything.",
+          credit: ["**Erich Mendelsohn**, studio portrait, Munich", "Photographer unknown. Retouched (cropped, colour) by Itzuvit.", "Wikimedia Commons: Erich_Mendelsohn_cropped.jpg", "Licence: CC BY 3.0 (creativecommons.org/licenses/by/3.0). Cropped to a circle here."],
+          box: { left: "4vw", top: "56vh", width: "11vw" }, mobile: { box: { width: "34vw", order: "3" } },
+          enter: { effect: "scale-in", speed: "slow", delay: 900 } }
+      ]
+    },
+    /* Interstitial: one line from a letter, first person, no voice. Erich to Luise, Eastern Front, 8 June 1917 (our translation). */
+    {
+      id: "letter-1917",
+      bg: "ink", ink: "paper", nav: false,
+      sound: { src: "assets/audio/bach-bwv1007-prelude.mp3", volume: 0.35 },
+      elements: [
+        { id: "letter-1917-label", type: "text", role: "label", color: "paper", text: "Ilipan, Eastern Front · 8 June 1917",
+          box: { left: "4vw", top: "5vh", width: "60vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in", delay: 300 } },
+        { id: "letter-1917-quote", type: "text", role: "title", color: "paper", gap: "0.6em",
+          paragraphs: ["“When I set down these visions, the *what* and the *how* sit hard against each other.", "The what is the sketch that no one else understands. The how is the thought in form, and only that makes it understandable.”"],
+          box: { left: "4vw", top: "20vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "12vh", width: "88vw" } },
+          enter: { effect: "words-in", stagger: 45, speed: "slow", delay: 600 } },
+        { id: "letter-1917-from", type: "text", role: "small", color: "paper", text: "Erich Mendelsohn to Luise Mendelsohn. Translated from the German for this exhibition.",
+          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { left: "6vw", bottom: "5vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2600 } },
+        { id: "letter-1917-scan", type: "image", src: "assets/img/letter-1917-06-08.webp", opacity: 0.92,
+          alt: "Two handwritten pages of Erich Mendelsohn’s letter of 8 June 1917; the quoted passage is at the top of the right-hand page",
+          text: "Pages 7 and 8 of a letter to Luise. The passage quoted here begins at the top of the right-hand page: *bei der Aufzeichnung der Gesichte*, when setting down the visions.",
+          credit: ["**Erich Mendelsohn to Luise Mendelsohn**, Ilipan, 8 June 1917, pages 7–8", "© Stiftung Preußischer Kulturbesitz, Kunstbibliothek – Staatliche Museen zu Berlin. EMA – Erich Mendelsohn Archive, ID emaem_19170608_006_tb-02_v.", "Licence: CC BY-NC-SA 3.0 DE (creativecommons.org/licenses/by-nc-sa/3.0/de).", "Quotation translated from the German original for this exhibition."],
+          box: { left: "60.4vw", top: "18vh", width: "min(35.6vw, 82vh)" }, mobile: { box: { left: "6vw", top: "58vh", width: "88vw" } },
+          enter: { effect: "fade-in", speed: "slow", delay: 1400 } }
+      ]
+    },
+
+    /* Room 2 · Einstein Tower. Scroll: the 1920 sketch gives way to a line, the line to the building as it stands.
+       Sketch and photo share one frame (both cropped to the same proportions). */
+    {
+      id: "einstein-tower",
+      scroll: true,
+      line: { color: "ink" },
+      elements: [
+        { id: "et-label", type: "text", role: "label", text: "Room 2 · Einstein Tower", pin: [0, 300],
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        miniRoute("et-map", 1920, "1920 · Potsdam", [0, 300]),
+        { id: "et-hint", type: "text", role: "small", text: "Scroll ↓", pin: [0, 300],
+          box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 7vh)", width: "20vw" }, mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 6vh)" } },
+          scrub: { start: 0, end: 30, frames: [{ opacity: 1 }, { opacity: 0 }] } },
+        { id: "et-photo", type: "image", src: "assets/img/einstein-tower-photo.webp", pin: [0, 300], mat: "white",
+          text: "The tower as it stands today on the Telegrafenberg in Potsdam, seen from the same side as the 1920 sketch.",
+          alt: "The Einstein Tower in Potsdam today: a pale rendered tower with a low curved wing to the left, seen from the north-west",
+          box: { left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "24vh", width: "88vw" } },
+          scrub: { start: 110, end: 200, frames: [{ opacity: 0 }, { opacity: 1 }] } },
+        { id: "et-sketch", type: "image", src: "assets/img/einstein-tower-sketch-1920-frame.webp", pin: [0, 300], zoom: false, mat: "white",
+          alt: "Erich Mendelsohn’s sketch of the Einstein Tower, 1920, in black and yellow chalk",
+          box: { pointerEvents: "none", left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "24vh", width: "88vw" } },
+          scrub: { start: 40, end: 150, frames: [{ opacity: 1 }, { opacity: 0 }] } },
+        { id: "et-line", type: "line", viewBox: "0 0 1000 690", fit: "none", clip: true, paths: ET_LINE, stroke: "ink", width: 2, pin: [0, 300],
+          box: { left: "4vw", top: "13vh", width: "min(60vw, 82vh)", height: "calc(min(60vw, 82vh) * 0.69)" },
+          mobile: { box: { left: "6vw", top: "24vh", width: "88vw", height: "calc(88vw * 0.69)" } },
+          scrubDraw: { start: 25, end: 125 },
+          scrub: { start: 190, end: 250, frames: [{ opacity: 1 }, { opacity: 0 }] } },
+        { id: "et-cap-sketch", type: "text", role: "small", text: "*1920.* The sketch.", pin: [0, 300],
+          box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 2.5vh)", width: "40vw" },
+          mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 2vh)", width: "88vw" } },
+          scrub: { start: 60, end: 110, frames: [{ opacity: 1 }, { opacity: 0 }] } },
+        { id: "et-cap-photo", type: "text", role: "small", text: "*Today.* The tower on the Telegrafenberg, Potsdam. Photo: Bautsch, Wikimedia Commons, CC0.", pin: [0, 300],
+          box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 2.5vh)", width: "40vw" },
+          mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 2vh)", width: "88vw" } },
+          scrub: { start: 170, end: 210, frames: [{ opacity: 0 }, { opacity: 1 }] } },
+        { id: "et-intro", type: "text", role: "lead", pin: [0, 300],
+          text: "In 1920 he drew it in a few strokes of chalk. Keep scrolling: the line becomes the building.",
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "auto", bottom: "8vh", width: "88vw" } },
+          scrub: { start: 120, end: 180, frames: [{ opacity: 1 }, { opacity: 0 }] } },
+        { id: "et-text", type: "text", role: "body", pin: [0, 300],
+          text: "A solar observatory, built so that the astronomer Erwin Finlay-Freundlich could test Einstein’s theory of relativity in the light of the sun. Mendelsohn drew it for concrete. Most of it was built in brick and rendered so that it looks cast in one piece. The instruments were in place by 1924.",
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "auto", bottom: "4vh", width: "88vw" } },
+          scrub: { start: 220, end: 280, frames: [{ opacity: 0, transform: "translateY(20px)" }, { opacity: 1, transform: "none" }] } }
+      ]
+    },
+
+    /* Room 2 · the manifesto, full screen. Amsterdam lecture, 1923 (German original in the public domain; our translation). */
+    {
+      id: "manifesto",
+      bg: "ink", ink: "paper",
+      elements: [
+        { id: "manifesto-label", type: "text", role: "label", color: "paper", text: "Room 2 · Dynamics and Function, 1923",
+          box: { left: "4vw", top: "5vh", width: "60vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        { id: "manifesto-quote", type: "text", role: "display", color: "paper", size: "clamp(38px,min(5.8vw,10vh),120px)", lh: "0.98",
+          text: "“A single force is always static, but the play of forces is always *dynamic.”*",
+          box: { left: "4vw", top: "18vh", width: "88vw" }, mobile: { box: { left: "6vw", top: "14vh", width: "88vw" }, size: "38px" },
+          enter: { effect: "words-in", stagger: 70, speed: "slow", delay: 300 } },
+        { id: "manifesto-de", type: "text", role: "lead", color: "paper", italic: true, opacity: 0.5,
+          text: "„Wohl ist die Einzelkraft stets statisch, aber das Kräftespiel ist stets dynamisch!“",
+          box: { left: "4vw", top: "calc(18vh + 3 * 0.98 * clamp(38px,min(5.8vw,10vh),120px) + 4vh)", width: "70vw" },
+          mobile: { box: { left: "6vw", top: "62vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2400 } },
+        { id: "manifesto-src", type: "text", role: "small", color: "paper",
+          text: "Erich Mendelsohn, *Die internationale Übereinstimmung des neuen Baugedankens oder Dynamik und Funktion* (The international agreement of the new idea of building, or Dynamics and Function), lecture, Amsterdam, 1923. Published in *Das Gesamtschaffen des Architekten*, 1930. English translation made for this exhibition.",
+          box: { left: "4vw", bottom: "8vh", width: "60vw" }, mobile: { box: { left: "6vw", bottom: "4vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2800 } }
+      ]
+    },
+    /* Room 3 · The Dynamic City. Night: the city of the 1920s, its traffic and its lit bands of windows.
+       First his own words on the Mossehaus (1923 lecture, our translation), then a walk through five works. */
+    {
+      id: "dynamic-city",
+      bg: "ink", ink: "paper",
+      line: { color: "paper" },
+      elements: [
+        { id: "city-label", type: "text", role: "label", color: "paper", text: "Room 3 · The Dynamic City",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        miniRoute("city-map", 1926, "1920s · Berlin", null),
+        { id: "city-quote", type: "text", role: "title", color: "paper", gap: "0.5em",
+          paragraphs: ["“Here the house is no uninvolved spectator of the rushing cars and the traffic flooding back and forth.", "It has become an element of movement: it takes the traffic in and takes part in it.”"],
+          box: { left: "4vw", top: "22vh", width: "58vw" }, mobile: { box: { left: "6vw", top: "14vh", width: "88vw" } },
+          enter: { effect: "words-in", stagger: 40, speed: "slow", delay: 300 } },
+        { id: "city-quote-de", type: "text", role: "lead", color: "paper", italic: true, opacity: 0.5,
+          text: "„…kein unbeteiligter Zuschauer der sausenden Autos, des hin und her flutenden Verkehrs, sondern … zum aufnehmenden, mitwirkenden Bewegungselement geworden.“",
+          box: { left: "4vw", top: "58vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "56vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2400 } },
+        { id: "city-quote-src", type: "text", role: "small", color: "paper", opacity: 0.7,
+          text: "Erich Mendelsohn on the Mossehaus, the Berliner Tageblatt building on a busy corner in Berlin. Lecture, Amsterdam, 1923. English translation made for this exhibition.",
+          box: { left: "4vw", bottom: "8vh", width: "52vw" }, mobile: { box: { left: "6vw", bottom: "5vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2800 } },
+        { id: "city-mauretania", type: "text", role: "body", color: "paper",
+          text: "In his studio the new façade had a nickname: *the Mauretania entering Berlin’s Westhafen*, after the great ocean liner. He repeated the joke in the same lecture and said it held as much truth as irony.",
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { hide: true }, enter: { effect: "fade-up", delay: 3200 } }
+      ]
+    },
+
+    /* Room 3 · walk through the city (scroll moves the strip sideways). Photos: Wikimedia Commons, licences per item. */
+    {
+      id: "city-walk",
+      bg: "ink", ink: "paper", scroll: true, reveal: "circle",
+      elements: [
+        { id: "city-walk-strip", type: "walkthrough", textWidth: "34vw", gap: "8vw", parallax: 6, intro: "66vw", nav: "dots", introTitleRole: "display",
+          introTitle: "Five works, 1921\u2060–\u20601930",
+          introText: "Factories, an office corner, a book, two department stores. The same line runs through all of them: a long horizontal that holds the street together.",
+          hint: "Scroll to walk →", hintRole: "small",
+          items: [
+            { id: "walk-hatfactory", artist: "Luckenwalde, Brandenburg", ratio: 1.5,
+              slides: [
+                { src: "assets/img/city-hat-dyeworks.webp", alt: "The dyeworks of the hat factory: a tall dark roof shaped like a hat over a long brick base with triangular windows" },
+                { src: "assets/img/city-hat-panorama.webp", alt: "Panorama of the hat factory: the dyeworks and the long low production halls" },
+                { src: "assets/img/city-hat-inner.webp", alt: "Inside a production hall: a long row of concrete arches under the roof lights" },
+                { src: "assets/img/city-hatfactory.webp", alt: "A brick production hall with a stepped gable and a long triangular band of windows" }
+              ],
+              works: [{ title: "Hat factory Steinberg, Herrmann & Co.", medium: "1921–1923" }],
+              paragraphs: ["An industrial plant on the edge of a small town: production halls, a dyeworks, a power station and gatehouses. The dyeworks wears its roof like a hat; the long halls run under rows of concrete arches. Everything serves production, and every roof is drawn as one continuous line."],
+              credits: ["Photos: 1, 2 Lumu, 2013, CC BY-SA 3.0 DE · 3 Hans G. Oberlack, 2014, CC BY 4.0 · 4 Doris Antony, 2004, CC BY-SA 3.0. All via Wikimedia Commons."] },
+            { id: "walk-mosse", artist: "Berlin, Schützenstraße", src: "assets/img/city-mossehaus.webp", ratio: 1.03,
+              alt: "The rounded corner of the Mossehaus in Berlin with its bands of windows",
+              works: [{ title: "Mossehaus, Berliner Tageblatt", medium: "conversion and extension, 1921–1923" }],
+              paragraphs: ["The publishing house of Rudolf Mosse, badly damaged in the street fighting of January 1919, was given new upper floors and a new corner, with Richard Neutra working alongside him. Bands of windows pull toward the corner and drop over the entrance. The corner was destroyed in the war; what you see was rebuilt in the 1990s."],
+              credits: ["Photo: Jörg Zägel, 2009. Wikimedia Commons, CC BY-SA 3.0."] },
+            { id: "walk-amerika", artist: "Book, 1926", src: "assets/img/city-amerika.webp", ratio: 0.7,
+              alt: "Cover of Erich Mendelsohn’s book Amerika, 1926",
+              works: [{ title: "Amerika. Bilderbuch eines Architekten", medium: "photographs from his journey of 1924" }],
+              paragraphs: ["In 1924 he travelled to the United States and came back with photographs of grain silos, skyscrapers and New York at night. The book, published in 1926, showed German readers the city he wanted to build: tall, lit, in motion."],
+              credits: ["Cover, 1926. Wikimedia Commons, public domain."] },
+            { id: "walk-petersdorff", artist: "Wrocław (Breslau)", src: "assets/img/city-petersdorff.webp", ratio: 1.33,
+              alt: "The former Petersdorff department store in Wrocław, now called Kameleon, with its projecting rounded corner",
+              works: [{ title: "Department store Rudolf Petersdorff", medium: "1927–1928" }],
+              paragraphs: ["A corner that projects over the pavement, wrapped in alternating bands of glass and stone. After dark the bands of light carried the shop window into the street. Today the building is known as Kameleon."],
+              credits: ["Photo: Szczecinolog, 2022. Wikimedia Commons, CC BY-SA 4.0."] },
+            { id: "walk-schocken", artist: "Chemnitz", src: "assets/img/city-schocken-chemnitz.webp", ratio: 1.18,
+              alt: "The curved façade of the former Schocken department store in Chemnitz",
+              works: [{ title: "Department store Schocken", medium: "1927–1930" }],
+              paragraphs: ["One long curve following the street, striped with windows from end to end. Salman Schocken commissioned several stores from Mendelsohn; this one survives and now houses the State Museum of Archaeology Chemnitz."],
+              credits: ["Photo: Altsachse, 2014. Wikimedia Commons, CC BY-SA 4.0."] }
+          ] }
+      ]
+    },
+    { id: "letters-1933", bg: "ink", ink: "paper", elements: [{ id: "letters-1933-title", type: "text", role: "title", color: "paper", text: "Letters to Luise · 1933", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    { id: "exile", bg: "stone", elements: [{ id: "exile-title", type: "text", role: "title", text: "Architecture in Exile", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    { id: "silence", bg: "ink", ink: "paper", elements: [] },
+    { id: "finale", elements: [{ id: "finale-title", type: "text", role: "title", text: "What remains of an architect when buildings change?", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] },
+    /* After the exhibition (at the end of the walk): the curators' note, the line becomes a chart, then the numbers. All figures are fictional. */
+    {
+      id: "after",
+      line: { color: "ink" },
+      elements: [
+        { id: "after-label", type: "text", role: "label", text: "After the exhibition",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh" } },
+          enter: { effect: "fade-in" } },
+        { id: "after-note", type: "text", role: "lead",
+          text: "For four months this exhibition followed one line: the line Erich Mendelsohn drew before every building. It ran from sketches made at the front in 1917 to a hospital in San Francisco. The exhibition has ended. The archive stays open, and the line still leads out into the cities where his buildings stand.",
+          box: { left: "4vw", top: "14vh", width: "37.4vw" }, mobile: { box: { left: "6vw", top: "9vh", width: "88vw" }, role: "body" },
+          enter: { effect: "fade-up", speed: "slow", delay: 500 } },
+        { id: "after-chart-label", type: "text", role: "label", text: "Visits per week",
+          box: { left: "50.8vw", top: "14vh", width: "30vw" }, mobile: { box: { left: "6vw", top: "45vh" } },
+          enter: { effect: "fade-in", delay: 1000 } },
+        { id: "after-chart", type: "line", viewBox: "0 0 1000 300", fit: "none",
+          paths: [{ d: "M 0 299 L 1000 299", stroke: "grey", width: 1 }, { d: chartPath(WEEKLY, 1000, 300, 12), stroke: "ink", width: 2 }],
+          box: { left: "50.8vw", top: "19vh", width: "45.2vw", height: "28vh" },
+          mobile: { box: { left: "6vw", top: "49vh", width: "88vw", height: "13vh" } },
+          enter: { effect: "draw", duration: 2600, overlap: 0, delay: 1100 } },
+        { id: "after-chart-from", type: "text", role: "small", text: "Week 1",
+          box: { left: "50.8vw", top: "48.5vh" }, mobile: { box: { left: "6vw", top: "63vh" } }, enter: { effect: "fade-in", delay: 2400 } },
+        { id: "after-chart-to", type: "text", role: "small", text: "Week 17 · closing week", align: "right",
+          box: { right: "4vw", top: "48.5vh", width: "20vw" }, mobile: { box: { right: "6vw", top: "63vh", width: "50vw" } }, enter: { effect: "fade-in", delay: 2400 } },
+        { id: "after-visits", type: "counter", role: "stat", value: 237800, label: "visits in four months",
+          box: { left: "4vw", top: "64vh", width: "20vw" }, mobile: { box: { left: "6vw", top: "69vh", width: "40vw" } },
+          enter: { effect: "count", duration: 1800, delay: 2600 } },
+        { id: "after-countries", type: "counter", role: "stat", value: 74, label: "countries",
+          box: { left: "27.4vw", top: "64vh", width: "20vw" }, mobile: { box: { left: "54vw", top: "69vh", width: "40vw" } },
+          enter: { effect: "count", duration: 1800, delay: 2800 } },
+        { id: "after-minutes", type: "counter", role: "stat", value: 9.6, decimals: 1, label: "minutes on average along the line",
+          box: { left: "50.8vw", top: "64vh", width: "20vw" }, mobile: { box: { left: "6vw", top: "84vh", width: "40vw" } },
+          enter: { effect: "count", duration: 1800, delay: 3000 } },
+        { id: "after-posts", type: "counter", role: "stat", value: 18300, label: "posts with *#TheLineContinues*",
+          box: { left: "74.2vw", top: "64vh", width: "20vw" }, mobile: { box: { left: "54vw", top: "84vh", width: "40vw" } },
+          enter: { effect: "count", duration: 1800, delay: 3200 } }
+      ]
+    },
+
+    /* Voices: press and visitors (fictional). */
+    {
+      id: "voices",
+      elements: [
+        { id: "voices-label", type: "text", role: "label", text: "Voices",
+          box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
+        { id: "voices-press", type: "text", role: "title",
+          text: "“A show about one man’s pencil that ends up being about every street you walk down.”",
+          box: { left: "4vw", top: "14vh", width: "61vw" }, mobile: { box: { left: "6vw", top: "10vh", width: "88vw" } },
+          enter: { effect: "words-in", stagger: 40, speed: "slow", delay: 200 } },
+        { id: "voices-press-src", type: "text", role: "small", text: "*The Weekly Plan*, review",
+          box: { left: "4vw", top: "34vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "27vh" } }, enter: { effect: "fade-in", delay: 1400 } },
+        { id: "voices-1", type: "text", role: "body", gap: "0.7em",
+          paragraphs: ["★★★★★", "I came for the Einstein Tower and stayed for the letters. The 1933 room is quiet on purpose. I sat with it for a long time.", "*Ilse K., Leipzig*"],
+          box: { left: "4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "38vh", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 1600 } },
+        { id: "voices-2", type: "text", role: "body", gap: "0.7em",
+          paragraphs: ["♥ 2,314", "Tried the *draw the line* workshop with my students. Thirty sketches of a building none of them had seen, and every one of them moved.", "*@marta.draws*"],
+          box: { left: "35.2vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "56vh", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 1800 } },
+        { id: "voices-3", type: "text", role: "body", gap: "0.7em",
+          paragraphs: ["★★★★★", "Finished the walk and booked a train to Luckenwalde to see the hat factory. That’s the review.", "*Daniel R., Rotterdam*"],
+          box: { left: "66.4vw", top: "48vh", width: "29.6vw" }, mobile: { box: { left: "6vw", top: "74vh", width: "88vw" } },
+          enter: { effect: "fade-up", delay: 2000 } },
+        { id: "voices-note", type: "text", role: "small", text: "Reviews, press and figures are fictional: this is a concept project.", align: "right",
+          box: { right: "4vw", bottom: "8.5vh", width: "30vw" }, mobile: { hide: true },
+          enter: { effect: "fade-in", delay: 2400 } }
+      ]
+    },
+    { id: "credits", elements: [{ id: "credits-title", type: "text", role: "title", text: "Credits", box: { left: "4vw", top: "30vh", width: "60vw" }, enter: { effect: "fade-up" } }] }
+  ]
+};
+
+</script>
+  <script>
+/* Effects library. Every effect has an ID; exhibitions refer to effects by ID only.
+   Add an effect here once and it is available to every element on every screen.
+
+   Step (as written in exhibition data):
+     { effect: "fade-up", speed: "normal", feel: "soft", delay: 0, ...effect params }
+   Optional raw overrides: duration (ms), ease (CSS easing, e.g. "ease-in").
+   Presets: speed fast/normal/slow, feel soft/standard/sharp. */
+(function (g) {
+  "use strict";
+
+  const SPEED = { fast: 450, normal: 900, slow: 1600 };
+  const FEEL = {
+    soft: "cubic-bezier(.16,1,.3,1)",
+    standard: "cubic-bezier(.4,0,.2,1)",
+    sharp: "cubic-bezier(.76,0,.24,1)"
+  };
+  const DIR = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+
+  const timing = (s, extra) =>
+    Object.assign(
+      {
+        duration: s.duration != null ? s.duration : SPEED[s.speed || "normal"],
+        easing: s.ease || FEEL[s.feel || "soft"],
+        delay: s.delay || 0,
+        fill: "both"
+      },
+      extra
+    );
+
+  const REDUCE = matchMedia("(prefers-reduced-motion: reduce)");
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function splitWords(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((tn) => {
+      const frag = document.createDocumentFragment();
+      tn.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) frag.appendChild(document.createTextNode(part));
+        else {
+          const sp = document.createElement("span");
+          sp.className = "fx-w";
+          sp.style.display = "inline-block";
+          sp.textContent = part;
+          frag.appendChild(sp);
+        }
+      });
+      tn.parentNode.replaceChild(frag, tn);
+    });
+  }
+
+  /* ---- simple effects: frames(step) -> [from, to]; "out" plays them reversed ---- */
+  const effects = {
+    "fade-in": {
+      label: "Fade in",
+      params: {},
+      frames: () => [{ opacity: 0 }, { opacity: 1 }]
+    },
+    "fade-up": {
+      label: "Fade + rise",
+      params: { distance: "40px" },
+      frames: (s) => [
+        { opacity: 0, transform: `translateY(${s.distance || "40px"})` },
+        { opacity: 1, transform: "translateY(0)" }
+      ]
+    },
+    "slide-in": {
+      label: "Slide in",
+      params: { from: "left|right|up|down", distance: "10vw" },
+      frames: (s) => {
+        const [x, y] = DIR[s.from || "left"];
+        const d = s.distance || "10vw";
+        return [
+          { opacity: 0, transform: `translate(calc(${x} * ${d}), calc(${y} * ${d}))` },
+          { opacity: 1, transform: "translate(0,0)" }
+        ];
+      }
+    },
+    wipe: {
+      label: "Wipe reveal",
+      params: { from: "left|right|up|down" },
+      frames: (s) => {
+        // negative insets on the other sides: tight line-heights let glyphs overflow the box
+        const start = {
+          left: "inset(-40% 100% -40% -5%)",
+          right: "inset(-40% -5% -40% 100%)",
+          up: "inset(-5% -5% 100% -5%)",
+          down: "inset(100% -5% -5% -5%)"
+        }[s.from || "left"];
+        return [{ clipPath: start }, { clipPath: "inset(-40% -5% -40% -5%)" }];
+      }
+    },
+    "blur-in": {
+      label: "Blur in",
+      params: { blur: "24px" },
+      frames: (s) => [
+        { opacity: 0, filter: `blur(${s.blur || "24px"})` },
+        { opacity: 1, filter: "blur(0)" }
+      ]
+    },
+    "scale-in": {
+      label: "Scale in",
+      params: { from: "0.92" },
+      frames: (s) => [
+        { opacity: 0, transform: `scale(${s.from || 0.92})` },
+        { opacity: 1, transform: "scale(1)" }
+      ]
+    },
+    "drift-in": {
+      label: "Drift in (slow, for textures)",
+      params: { x: "6vw", y: "4vh" },
+      defaults: { speed: "slow" },
+      frames: (s) => [
+        { opacity: 0, transform: `translate(${s.x || "6vw"}, ${s.y || "4vh"}) scale(1.06)` },
+        { opacity: 1, transform: "translate(0,0) scale(1)" }
+      ]
+    },
+    move: {
+      label: "Move (use as a 2nd step)",
+      params: { x: "0", y: "0" },
+      frames: (s) => [{ transform: "translate(0,0)" }, { transform: `translate(${s.x || 0}, ${s.y || 0})` }]
+    }
+  };
+
+  /* ---- custom effects: run(node, step, dir) -> Promise ---- */
+  const formatNumber = (v, dec, pre, suf) =>
+    (pre || "") + Number(v).toLocaleString("en-US", { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }) + (suf || "");
+
+  /* dash length for drawing a stroke: with vector-effect non-scaling-stroke dashes are measured on screen, not in
+     viewBox units, so the path length is scaled by the drawing's on-screen scale (too long a dash is harmless) */
+  function dashLength(p) {
+    const L = p.getTotalLength ? p.getTotalLength() : 1000;
+    const m = p.getScreenCTM && p.getScreenCTM();
+    return L * Math.max(1, m ? Math.hypot(m.a, m.b) : 1, m ? Math.hypot(m.c, m.d) : 1) + 2;
+  }
+
+  const custom = {
+    /* route: the route's segments draw one after another (time ∝ length); each stop appears when the line reaches it */
+    route: {
+      label: "Route line draws stop to stop (type route)",
+      params: { duration: 5000 },
+      run(node, s, dir) {
+        const t = timing(s);
+        const segs = Array.from(node.querySelectorAll(".route-seg"));
+        const stops = Array.from(node.querySelectorAll(".route-stop"));
+        const extra = Array.from(node.querySelectorAll(".route-end, .route-tick"));
+        const last = Array.from(node.querySelectorAll(".route-here, .route-mini-label"));
+        const lens = segs.map((p) => p.getTotalLength());
+        const total = lens.reduce((a, b) => a + b, 0) || 1;
+        const ps = [];
+        const show = (el, at) => ps.push(el.animate([{ opacity: 0, transform: el.style.transform || "none" }, { opacity: 1, transform: el.style.transform || "none" }],
+          { duration: t.duration ? 600 : 0, delay: t.delay + at, easing: "ease-out", fill: "both" }).finished.catch(() => {}));
+        let at = 0;
+        if (stops[0]) show(stops[0], 0);
+        extra.forEach((e) => show(e, 0));
+        segs.forEach((p, i) => {
+          const d = (t.duration * lens[i]) / total;
+          const L = dashLength(p);
+          p.style.strokeDasharray = L + " " + L;
+          ps.push(p.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: d, delay: t.delay + at, easing: "cubic-bezier(.4,0,.6,1)", fill: "both" }).finished.catch(() => {}));
+          at += d;
+          if (stops[i + 1]) show(stops[i + 1], at - Math.min(200, d / 3));
+        });
+        last.forEach((e) => show(e, at)); // "you are here" appears once the whole line is drawn
+        return Promise.all(ps);
+      }
+    },
+
+    /* count: a counter element counts up from 0 and its underline draws itself */
+    count: {
+      label: "Number counts up, line drawn under it (type counter)",
+      params: { duration: 1800 },
+      run(node, s, dir) {
+        const t = timing(s);
+        const num = node.querySelector(".counter-num");
+        const ps = [];
+        if (num) {
+          const v = +num.dataset.value, dec = +num.dataset.decimals, pre = num.dataset.prefix, suf = num.dataset.suffix;
+          const ease = (x) => 1 - Math.pow(1 - x, 3);
+          ps.push(new Promise((res) => {
+            const t0 = performance.now() + t.delay;
+            num.textContent = formatNumber(dir === "out" ? v : 0, dec, pre, suf);
+            const tick = (now) => {
+              const k = t.duration ? Math.min(1, Math.max(0, (now - t0) / t.duration)) : 1;
+              const e = ease(dir === "out" ? 1 - k : k);
+              num.textContent = formatNumber(v * e, dec, pre, suf);
+              if (k < 1) requestAnimationFrame(tick); else res();
+            };
+            requestAnimationFrame(tick);
+          }));
+          ps.push(num.animate([{ opacity: 0 }, { opacity: 1 }], { duration: Math.min(500, t.duration), delay: t.delay, fill: "both" }).finished.catch(() => {}));
+        }
+        const line = node.querySelector(".counter-line path");
+        if (line) {
+          const L = dashLength(line);
+          line.style.strokeDasharray = L + " " + L;
+          ps.push(line.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: t.duration, delay: t.delay + t.duration * 0.25, easing: "cubic-bezier(.45,.05,.35,1)", fill: "both" }).finished.catch(() => {}));
+        }
+        const label = node.querySelector(".counter-label");
+        if (label) ps.push(label.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 700, delay: t.delay + t.duration * 0.5, easing: FEEL.soft, fill: "both" }).finished.catch(() => {}));
+        return Promise.all(ps);
+      }
+    },
+    /* draw: SVG strokes inside the element are drawn like a pencil line (stroke-dashoffset).
+       Paths are drawn one after another, each taking time in proportion to its length, so it reads as one hand. */
+    draw: {
+      label: "Line draws itself (SVG strokes, one after another)",
+      params: { duration: 4500, overlap: 0.15 },
+      run(node, s, dir) {
+        const t = timing(s, { fill: "both" });
+        const paths = Array.from(node.querySelectorAll("path, line, polyline, circle, ellipse"));
+        const filled = (p) => p.getAttribute("fill") && p.getAttribute("fill") !== "none";
+        const lens = paths.map((p) => (filled(p) ? 0 : p.getTotalLength ? p.getTotalLength() : 1000));
+        const dash = paths.map((p) => (filled(p) ? 0 : dashLength(p)));
+        const total = lens.reduce((a, b) => a + b, 0) || 1;
+        const ov = s.overlap != null ? s.overlap : 0.15;
+        let at = 0;
+        return Promise.all(paths.map((p, i) => {
+          const L = lens[i];
+          const d = (t.duration * L) / total;
+          if (p.getAttribute("fill") && p.getAttribute("fill") !== "none") {
+            // a filled shape (e.g. an accent disc) appears at its turn in the sequence
+            const a = p.animate(dir === "out" ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 0 }, { opacity: 1 }], { duration: REDUCE.matches ? 0 : 900, delay: t.delay + at, easing: "ease-out", fill: "both" });
+            return a.finished.catch(() => {});
+          }
+          const DL = dash[i];
+          p.style.strokeDasharray = DL + " " + DL;
+          const kf = [{ strokeDashoffset: DL }, { strokeDashoffset: 0 }];
+          const a = p.animate(dir === "out" ? kf.slice().reverse() : kf, { duration: d, delay: t.delay + at, easing: s.ease || "cubic-bezier(.45,.05,.35,1)", fill: "both" });
+          at += d * (1 - ov);
+          return a.finished.catch(() => {});
+        }));
+      }
+    },
+    "words-in": {
+      label: "Words appear one by one",
+      params: { stagger: 22, distance: "0.5em" },
+      run(node, s, dir) {
+        const t = timing(s);
+        if (!node.querySelector(".fx-w")) splitWords(node);
+        const words = Array.from(node.querySelectorAll(".fx-w"));
+        const st = s.stagger != null ? s.stagger : 22;
+        const d = s.distance || "0.5em";
+        const from = { opacity: 0, transform: `translateY(${d})` };
+        const to = { opacity: 1, transform: "translateY(0)" };
+        const n = words.length;
+        return Promise.all(
+          words.map((w, i) =>
+            w.animate(dir === "out" ? [to, from] : [from, to], {
+              duration: t.duration,
+              easing: t.easing,
+              delay: t.delay + (dir === "out" ? ((n - 1 - i) * st) / 4 : i * st),
+              fill: "both"
+            }).finished
+          )
+        );
+      }
+    },
+    "strips-assemble": {
+      label: "Image slides together from vertical strips (alternating up / down)",
+      params: { strips: 7 },
+      run(node, s, dir) {
+        const img = node.querySelector("img");
+        if (!img) return Promise.resolve();
+        node.querySelectorAll(".fx-tiles").forEach((x) => x.remove());
+        const n = s.strips || 7;
+        const t = timing(s);
+        const wrap = document.createElement("div");
+        wrap.className = "fx-tiles";
+        wrap.style.cssText = "position:absolute;inset:0;overflow:hidden;pointer-events:none";
+        const src = img.currentSrc || img.src;
+        const anims = [];
+        for (let i = 0; i < n; i++) {
+          const strip = document.createElement("div");
+          strip.style.cssText =
+            `position:absolute;top:0;height:100%;left:${(i / n) * 100}%;width:calc(${100 / n}% + 1px);` +
+            `background-image:url("${src}");background-size:${n * 100}% 100%;` +
+            `background-position:${n > 1 ? (i / (n - 1)) * 100 : 0}% 0`;
+          wrap.appendChild(strip);
+          const off = { transform: `translateY(${i % 2 ? 105 : -105}%)` };
+          const home = { transform: "translateY(0)" };
+          anims.push(
+            strip.animate(dir === "out" ? [home, off] : [off, home], {
+              duration: t.duration * 0.7,
+              delay: t.delay + i * ((t.duration * 0.3) / n),
+              easing: t.easing,
+              fill: "both"
+            })
+          );
+        }
+        node.appendChild(wrap);
+        img.style.visibility = "hidden";
+        return Promise.all(anims.map((a) => a.finished)).then(() => {
+          if (dir !== "out") {
+            img.style.visibility = "";
+            wrap.remove();
+          }
+        });
+      }
+    },
+    "tiles-assemble": {
+      label: "Image assembles from square tiles",
+      params: { cols: 8, rows: 6, scatter: "25" },
+      run(node, s, dir) {
+        const img = node.querySelector("img");
+        if (!img) return Promise.resolve();
+        node.querySelectorAll(".fx-tiles").forEach((n) => n.remove());
+        const cols = s.cols || 8;
+        const rows = s.rows || 6;
+        const scatter = Number(s.scatter != null ? s.scatter : 25);
+        const t = timing(s);
+        const wrap = document.createElement("div");
+        wrap.className = "fx-tiles";
+        wrap.style.cssText = "position:absolute;inset:0;overflow:visible;pointer-events:none";
+        const src = img.currentSrc || img.src;
+        const anims = [];
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const tile = document.createElement("div");
+            tile.style.cssText =
+              `position:absolute;left:${(c / cols) * 100}%;top:${(r / rows) * 100}%;` +
+              `width:calc(${100 / cols}% + 1px);height:calc(${100 / rows}% + 1px);` +
+              `background-image:url("${src}");background-size:${cols * 100}% ${rows * 100}%;` +
+              `background-position:${cols > 1 ? (c / (cols - 1)) * 100 : 0}% ${rows > 1 ? (r / (rows - 1)) * 100 : 0}%`;
+            wrap.appendChild(tile);
+            const away = {
+              opacity: 0,
+              transform: `translate(${rand(-scatter, scatter)}vw, ${rand(-scatter, scatter)}vh) scale(${rand(0.2, 0.8)})`
+            };
+            const home = { opacity: 1, transform: "translate(0,0) scale(1)" };
+            anims.push(
+              tile.animate(dir === "out" ? [home, away] : [away, home], {
+                duration: t.duration * 0.6,
+                delay: t.delay + rand(0, t.duration * 0.4),
+                easing: t.easing,
+                fill: "both"
+              })
+            );
+          }
+        }
+        node.appendChild(wrap);
+        img.style.visibility = "hidden";
+        return Promise.all(anims.map((a) => a.finished)).then(() => {
+          if (dir !== "out") {
+            img.style.visibility = "";
+            wrap.remove();
+          }
+        });
+      }
+    }
+  };
+
+  /* ---- scene effects: whole-screen sequences. run(screenEl, step, ctx) -> Promise ---- */
+  const scenes = {
+    "elevator-doors": {
+      label: "Elevator from inside: light in the door gap rises past textures, floor counter on the left, doors open. With move/hold: the cabin slows down at every floor, a band of landing light passes over the doors",
+      params: { duration: 5600, floors: 4, move: "1300 (ms per floor; enables stop-and-go)", hold: "400 (ms pause at a floor)", landing: "#ffd9a8 (light band colour, false = none)", gap: "5vw", from: "#000", via: "#9fb3c1", to: "#000", glow: "#2a4bff", finale: "[element ids]", textures: "[image urls]" },
+      run(screenEl, s, ctx) {
+        const floors = s.floors != null ? s.floors : 4;
+        // stop-and-go (s.move): doors crack open, then per floor: move (ease in-out) + hold
+        const START = 700;
+        const steps = s.move ? floors : 0;
+        const ride = steps ? START + floors * (s.move + (s.hold || 0)) : (s.duration || 5600) * 0.78;
+        const D = steps ? ride + 1250 : s.duration || 5600;
+        const passAt = (k) => START + k * (s.move + (s.hold || 0)) + s.move / 2; // floor k+1 is passed half way through its move
+        const gap = s.gap || "5vw";
+        const ease = s.ease || "cubic-bezier(.6,0,.2,1)";
+        const layer = document.createElement("div");
+        layer.className = "fx-scene";
+        layer.style.cssText = "position:absolute;inset:0;overflow:hidden;z-index:5;pointer-events:none";
+
+        // shaft seen through the gap
+        const shaft = document.createElement("div");
+        shaft.style.cssText = `position:absolute;inset:0;overflow:hidden;background:${s.from || "#000"}`;
+        const tex = s.textures || [];
+        const STEP = 90; // vh
+        const track = document.createElement("div");
+        const trackH = (s.finale ? 100 : 0) + Math.max(tex.length, 1) * STEP;
+        track.style.cssText = `position:absolute;left:0;right:0;top:0;height:${trackH}vh`;
+        tex.forEach((u, i) => {
+          const im = document.createElement("img");
+          im.src = u;
+          im.alt = "";
+          const off = s.finale ? 100 : 0;
+          im.style.cssText = `position:absolute;top:${off + i * STEP}vh;left:${i % 2 ? 8 : 34}vw;width:58vw`;
+          track.appendChild(im);
+        });
+        (s.finale || []).forEach((id) => {
+          const src = screenEl.querySelector(`[data-id="${id}"]`);
+          if (!src) return;
+          const copy = src.cloneNode(true);
+          copy.removeAttribute("data-id");
+          track.appendChild(copy);
+        });
+        shaft.appendChild(track);
+        layer.appendChild(shaft);
+        const travel = Math.max(trackH - 100, 0);
+        let trackFrames = [{ transform: `translateY(-${travel}vh)` }, { transform: "translateY(0)" }];
+        if (steps) {
+          const y = (k) => `translateY(-${travel * (1 - k / floors)}vh)`;
+          trackFrames = [{ offset: 0, transform: y(0) }, { offset: START / ride, transform: y(0), easing: "cubic-bezier(.5,0,.3,1)" }];
+          for (let k = 1; k <= floors; k++) {
+            const t = START + (k - 1) * (s.move + (s.hold || 0)) + s.move;
+            trackFrames.push({ offset: t / ride, transform: y(k), easing: "cubic-bezier(.5,0,.3,1)" });
+            trackFrames.push({ offset: Math.min((t + (s.hold || 0)) / ride, 1), transform: y(k), easing: "cubic-bezier(.5,0,.3,1)" });
+          }
+        }
+        const aTrack = track.animate(trackFrames, { duration: ride, easing: steps ? "linear" : ease, fill: "both" });
+        const aShaft = shaft.animate(
+          (s.via
+            ? [{ backgroundColor: s.from || "#000" }, { backgroundColor: s.via }, { backgroundColor: s.to || "#000" }]
+            : [{ backgroundColor: s.from || "#000" }, { backgroundColor: s.to || "#9fb3c1" }]),
+          { duration: ride, easing: "ease-in-out", fill: "both" }
+        );
+
+        // doors: closed → crack open to the gap → ride → slide away
+        const o = (ms) => Math.min(Math.max(ms / D, 0), 1);
+        const doorFrames = (sign) => [
+          { offset: 0, transform: "translateX(0)" },
+          { offset: o(300), transform: "translateX(0)", easing: "cubic-bezier(.4,0,.2,1)" },
+          { offset: o(1000), transform: `translateX(calc(${sign} * ${gap} / 2))` },
+          { offset: o(ride), transform: `translateX(calc(${sign} * ${gap} / 2))`, easing: "cubic-bezier(.76,0,.24,1)" },
+          { offset: 1, transform: `translateX(${sign * 101}%)` }
+        ];
+        const door = (side) => {
+          const d = document.createElement("div");
+          d.style.cssText = `position:absolute;top:0;bottom:0;${side}:0;width:50%;background:#000`;
+          // LED strip along the inner edge: white-hot core + coloured bloom spilling onto the door and into the gap
+          const inner = side === "left" ? "right" : "left";
+          const g = s.glow || "#2a4bff";
+          const wash = document.createElement("div");
+          wash.style.cssText =
+            `position:absolute;top:0;bottom:0;${inner}:0;width:14vw;pointer-events:none;` +
+            `background:linear-gradient(to ${inner}, transparent, ${g}33 70%, ${g}66);`;
+          const strip = document.createElement("div");
+          strip.style.cssText =
+            `position:absolute;top:0;bottom:0;${inner}:0;width:3px;background:#eef2ff;` +
+            `box-shadow:0 0 4px #fff, 0 0 12px ${g}, 0 0 32px ${g}, 0 0 80px ${g}, 0 0 160px ${g}99`;
+          d.appendChild(wash);
+          d.appendChild(strip);
+          layer.appendChild(d);
+          return d.animate(doorFrames(side === "left" ? -1 : 1), { duration: D, fill: "both" });
+        };
+        const aL = door("left");
+        const aR = door("right");
+        const aOut = shaft.animate([{ opacity: 1 }, { opacity: 0 }], { duration: D - ride, delay: ride, easing: "ease-in", fill: "forwards" });
+
+        // landing light: a warm band sweeps down over doors and gap each time a floor is passed
+        const sweeps = [];
+        if (steps && s.landing !== false) {
+          const c = s.landing || "#ffd9a8";
+          for (let k = 0; k < floors; k++) {
+            const band = document.createElement("div");
+            band.style.cssText =
+              "position:absolute;left:0;right:0;top:0;height:46vh;pointer-events:none;mix-blend-mode:screen;z-index:1;" +
+              `background:linear-gradient(transparent, ${c}14 30%, ${c}38 50%, ${c}14 70%, transparent)`;
+            layer.appendChild(band);
+            const len = s.move * 0.9;
+            sweeps.push(band.animate(
+              [{ transform: "translateY(-50vh)", opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 1, offset: 0.75 }, { transform: "translateY(105vh)", opacity: 0 }],
+              { duration: len, delay: passAt(k) - len / 2, easing: "cubic-bezier(.4,0,.6,1)", fill: "both" }
+            ));
+          }
+        }
+
+        // floor counter on the left: ▲ blinks while riding, floors stacked top (highest) to bottom, the reached one flashes
+        const ind = document.createElement("div");
+        ind.style.cssText =
+          "position:absolute;left:6vw;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:.35em;" +
+          "font-family:var(--font);font-weight:500;font-size:clamp(26px,3.4vw,58px);line-height:1;color:#fff;z-index:2";
+        const arrow = document.createElement("span");
+        arrow.textContent = "▲";
+        arrow.style.cssText = "font-size:.5em;margin-bottom:.4em";
+        ind.appendChild(arrow);
+        const aArrow = arrow.animate([{ opacity: 1 }, { opacity: 0.15 }, { opacity: 1 }], { duration: 900, iterations: Math.max(1, Math.round(ride / 900)) });
+        const digits = [];
+        for (let i = floors; i >= 0; i--) {
+          const d = document.createElement("span");
+          d.textContent = i;
+          d.style.cssText = "display:block;opacity:.22;transition:opacity .25s";
+          ind.appendChild(d);
+          digits[i] = d;
+        }
+        layer.appendChild(ind);
+        const aInd = ind.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: ride, fill: "forwards" });
+        const g = s.glow || "#2a4bff";
+        let raf = 0;
+        let shown = -1;
+        const tick = () => {
+          let f;
+          if (steps) {
+            const t = aTrack.currentTime == null ? ride : aTrack.currentTime;
+            f = 0;
+            for (let k = 0; k < floors; k++) if (t >= passAt(k)) f = k + 1;
+          } else {
+            const p = aTrack.effect.getComputedTiming().progress;
+            f = Math.round((p == null ? 1 : p) * floors);
+          }
+          if (f !== shown) {
+            shown = f;
+            digits.forEach((d, i) => { d.style.opacity = i === f ? "1" : ".22"; });
+            if (f > 0) digits[f].animate(
+              [{ textShadow: `0 0 6px #fff, 0 0 22px ${g}, 0 0 48px ${g}`, transform: "scale(1.18)" }, { textShadow: "0 0 0 transparent", transform: "scale(1)" }],
+              { duration: 700, easing: "ease-out" }
+            );
+          }
+          if (aTrack.playState !== "finished") raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+
+        screenEl.appendChild(layer);
+        Promise.all([aL.finished, aR.finished, aOut.finished, aInd.finished, aShaft.finished, aArrow.finished, ...sweeps.map((a) => a.finished)]).then(() => layer.remove()).catch(() => {});
+        return { total: ride + 300, cancel() { cancelAnimationFrame(raf); layer.remove(); } };
+      }
+    },
+    "elevator-rise": {
+      label: "Elevator ride up: rushing floor lines, floor counter, colour shift",
+      params: { duration: 5200, floors: 4, to: "#16242d", label: "{en:'Level', sv:'Plan'}" },
+      run(screenEl, s, ctx) {
+        const D = s.duration || 5200;
+        const floors = s.floors != null ? s.floors : 4;
+        const ease = s.ease || "cubic-bezier(.65,0,.25,1)";
+        const layer = document.createElement("div");
+        layer.className = "fx-scene";
+        layer.style.cssText = "position:absolute;inset:0;overflow:hidden;z-index:5;pointer-events:none";
+
+        const LINES = 46;
+        const GAP = 14; // vh
+        const track = document.createElement("div");
+        track.style.cssText = `position:absolute;left:0;right:0;top:0;height:${LINES * GAP}vh`;
+        for (let i = 0; i < LINES; i++) {
+          const line = document.createElement("div");
+          const strong = i % 5 === 0;
+          line.style.cssText =
+            `position:absolute;left:0;right:0;top:${i * GAP}vh;height:${strong ? 3 : 1}px;` +
+            `background:#fff;opacity:${strong ? 0.85 : 0.35}`;
+          track.appendChild(line);
+        }
+        layer.appendChild(track);
+        const travel = (LINES * GAP - 100);
+        const a1 = track.animate(
+          [{ transform: `translateY(-${travel}vh)` }, { transform: "translateY(0)" }],
+          { duration: D, easing: ease, fill: "both" }
+        );
+
+        // floor counter: a vertical reel clipped to one line
+        const counter = document.createElement("div");
+        counter.style.cssText =
+          "position:absolute;left:6vw;bottom:7vh;display:flex;align-items:flex-end;gap:1.2vw;color:#fff;" +
+          "font-family:var(--font);font-weight:500;line-height:1";
+        const lbl = document.createElement("div");
+        lbl.style.cssText = "font-size:clamp(14px,1.4vw,22px);font-weight:400;letter-spacing:.04em;text-transform:uppercase;padding-bottom:.6em";
+        lbl.textContent = (s.label && (s.label[ctx.lang()] || s.label.en)) || "";
+        const win = document.createElement("div");
+        win.style.cssText = "height:1em;overflow:hidden;font-size:clamp(72px,12vw,200px)";
+        const reel = document.createElement("div");
+        for (let i = 0; i <= floors; i++) {
+          const d = document.createElement("div");
+          d.style.cssText = "height:1em;line-height:1";
+          d.textContent = i;
+          reel.appendChild(d);
+        }
+        win.appendChild(reel);
+        counter.appendChild(lbl);
+        counter.appendChild(win);
+        layer.appendChild(counter);
+        const a2 = reel.animate(
+          [{ transform: "translateY(0)" }, { transform: `translateY(-${floors}em)` }],
+          { duration: D, easing: ease, fill: "both" }
+        );
+
+        screenEl.appendChild(layer);
+        const bgTimer = setTimeout(() => ctx.setBg(s.to || "#16242d", D * 0.55), D * 0.35);
+        const fadeAt = D + (s.hold != null ? s.hold : 300);
+        const a3 = layer.animate([{ opacity: 1 }, { opacity: 0 }], {
+          duration: 700,
+          delay: fadeAt,
+          easing: "ease-out",
+          fill: "both"
+        });
+        const total = fadeAt + 700;
+        const done = Promise.all([a1.finished, a2.finished, a3.finished]).then(() => layer.remove());
+        return { total: D + 300, done, cancel() { clearTimeout(bgTimer); layer.remove(); } };
+      }
+    }
+  };
+
+  /* ---- hover effects are pure CSS, listed here so the catalog can show them ---- */
+  const hovers = {
+    lift: "Raise 8px",
+    zoom: "Image zooms 5%",
+    underline: "Underline grows in",
+    dim: "Others dim, this one stays bright"
+  };
+
+  /* ---- scroll effects: set as element properties on scrollable screens (handled by the engine) ---- */
+  const scrollFx = {
+    "frame-parallax": "parallax: 12 — the image drifts inside its frame while the frame scrolls (lags behind). Number = max shift, % of frame height; negative reverses",
+    "blob-zoom": "type \"blobzoom\" element with blob: {mask, aspect, focal, lobeR, box, range} — a blob-shaped window onto a full-screen image; scrolling zooms into the blob until the whole image is revealed",
+    pin: "pin: [0, 100] — element stays still while the screen scrolls from 0 to 100vh",
+    scrub: "scrub: { start, end, frames } — animation plays in step with scrolling (e.g. photo opening up)",
+    "reveal-on-scroll": "reveal: \"scroll\" — enter effect plays when the element (or each paragraph) scrolls into view",
+    "walk-through": "type \"walkthrough\" element with items: [{artist, goto, src, works: [{title, medium}], paragraphs, credits}] — rooms side by side (photo + text), walked through left to right while scrolling down (also ← → keys and sideways swipe); photos drift and come closer, counter and progress line bottom left. Long text stays put, is cut off above the counter with a fade and scrolls on its own under the cursor. Options: hint, credit, parallax (8), gap (10vw), textWidth (40vw), textBottom (vh above the bottom; default: above the counter), tail (black space after the last room; default: last text ends in the middle)",
+    "info-bubble": "ex.info: {texture, target} — swaying circle of texture with an i, bottom right, on every screen; screen.info: \"<id>\" picks where it leads, info: false hides it; click plays circle-open (the circle grows over the screen into the new page). On a screen with infoPage: true it shows × and leads back",
+    "line": "type \"line\" element: {viewBox, paths: [d, ...], stroke, width} — an SVG drawing; with enter {effect: \"draw\"} it draws itself stroke by stroke",
+    "grid": "type \"grid\" element: {columns: 12, margin: \"4vw\", gutter: \"1.6vw\", color, opacity} — thin column lines of the layout grid",
+    "button": "type \"button\" / \"buttons\" (row, items: [...]): {text, goto, variant: \"solid\" | \"link\", color, arrow} — pill button or underlined link",
+    "counter": "type \"counter\": {value, decimals, prefix, suffix, label} with enter {effect: \"count\"} — counts up, line drawn under the number",
+    "route": "type \"route\": a life as one line, years across, a value (e.g. latitude) up and down; stops appear as the line reaches them (enter effect \"route\"); vertical: true for phones; current: index of the highlighted stop",
+    "line-across": "screen.line: true | {d, color, duration} — one free line runs across the screen while that screen comes in (transition)",
+    "sound-toggle": "type \"sound\" element: {on, off} labels — toggles sound for the whole exhibition (off by default, remembered); engine.sound is true/false, event \"ex-sound\" on window",
+    "cursor-square": "theme.cursor: \"square\" — the pointer becomes a square that inverts what is under it (white on black, black on white); mouse / trackpad only"
+  };
+
+  /* ---- runner ---- */
+  function runStep(node, step, dir, baseDelay) {
+    const s = Object.assign({}, (effects[step.effect] || {}).defaults, step);
+    s.delay = (s.delay || 0) + (baseDelay || 0);
+    if (REDUCE.matches) { s.duration = 0; s.delay = 0; s.stagger = 0; } // prefers-reduced-motion: final state at once
+    if (custom[s.effect]) return custom[s.effect].run(node, s, dir || "in");
+    const fx = effects[s.effect];
+    if (!fx) {
+      console.warn("Unknown effect id:", s.effect);
+      return Promise.resolve();
+    }
+    let frames = fx.frames(s);
+    if (dir === "out") frames = frames.slice().reverse();
+    const anim = node.animate(frames, timing(s));
+    // entered elements return to their natural CSS state, so hover styles can act on them
+    if (dir !== "out" && s.effect !== "move") anim.finished.then(() => anim.cancel()).catch(() => {});
+    return anim.finished;
+  }
+
+  /* steps: one step or an array played one after another */
+  function run(node, steps, dir, baseDelay) {
+    const list = Array.isArray(steps) ? steps : [steps];
+    let offset = baseDelay || 0;
+    const ps = [];
+    list.forEach((st) => {
+      const t = timing(st);
+      ps.push(runStep(node, st, dir, offset));
+      offset += (st.delay || 0) + t.duration;
+    });
+    return Promise.all(ps);
+  }
+
+  g.FX = { SPEED, FEEL, effects, custom, scenes, hovers, scrollFx, timing, run, formatNumber, dashLength };
+})(window);
+
+</script>
+  <script>
+/* Exhibition engine. Knows nothing about any specific exhibition.
+   Reads window.EXHIBITION (see exhibitions/<name>/exhibition.js) and plays it.
+
+   exhibition → screens → elements (+ enter / exit / hover / click)
+   Keys: ↓ ↑ Space PageUp/PageDown navigate · D toggles ID labels (for pointing at things in chat) */
+(function (g) {
+  "use strict";
+  const FX = g.FX;
+
+  const h = (tag, cls, css) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (css) Object.assign(e.style, css);
+    return e;
+  };
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>");
+  const BOX = { x: "left", y: "top", w: "width", h: "height", left: "left", top: "top", right: "right", bottom: "bottom", width: "width", height: "height" };
+
+  class Engine {
+    constructor(root, ex) {
+      this.root = root;
+      this.ex = ex;
+      this.lang = this.pickLang();
+      this.screens = [];
+      this.byId = {};
+      this.sound = (() => { try { return localStorage.getItem("ex-sound") === "1"; } catch (e) { return false; } })();
+      this.current = null;
+      this.busy = false;
+      this.injectFonts();
+      this.applyTheme();
+      // narrow screens: elements take their `mobile` overrides; crossing the breakpoint rebuilds the screens
+      const mq = matchMedia(`(max-width: ${ex.theme.mobileMax || 700}px)`);
+      this.mobile = mq.matches;
+      mq.addEventListener("change", () => {
+        this.mobile = mq.matches;
+        const id = this.current && this.current.def.id;
+        this.screens = [];
+        this.byId = {};
+        this.current = null;
+        this.busy = false;
+        if (this.chrome) this.chrome.remove();
+        this.build();
+        if (id) this.go(id, { instant: true });
+      });
+      this.build();
+      this.bindInput();
+      const start = (location.hash || "").slice(1);
+      this.go(this.byId[start] ? start : this.linear()[0].def.id, { instant: true });
+    }
+
+    /* ---------- setup ---------- */
+    pickLang() {
+      const langs = this.ex.meta.langs || ["en"];
+      const saved = (() => { try { return localStorage.getItem("ex-lang"); } catch (e) { return null; } })();
+      return langs.includes(saved) ? saved : this.ex.meta.defaultLang || langs[0];
+    }
+
+    injectFonts() {
+      const css = (this.ex.theme.fonts || [])
+        .map((f) => `@font-face{font-family:"${f.family}";font-weight:${f.weight};font-style:${f.style || "normal"};font-display:swap;src:${f.src.map((u) => `url("${u.url}") format("${u.format}")`).join(",")}}`)
+        .join("\n");
+      const st = document.createElement("style");
+      st.textContent = css;
+      document.head.appendChild(st);
+    }
+
+    applyTheme() {
+      const t = this.ex.theme;
+      const r = document.documentElement.style;
+      r.setProperty("--font", t.fontStack || "sans-serif");
+      Object.keys(t.colors || {}).forEach((k) => r.setProperty("--c-" + k, t.colors[k]));
+      document.title = this.tr(this.ex.meta.title);
+    }
+
+    tr(v) {
+      if (v == null) return "";
+      if (typeof v === "string") return v;
+      return v[this.lang] != null ? v[this.lang] : v.en != null ? v.en : "";
+    }
+
+    color(c) {
+      const cs = this.ex.theme.colors || {};
+      return cs[c] || c;
+    }
+
+    /* Screens are grouped into tracks. Scrolling moves within the current track.
+       Default track is "main"; e.g. each artist can have its own track of screens. */
+    trackName(rec) {
+      return rec.def.track || "main";
+    }
+
+    track(name) {
+      return this.screens.filter((s) => this.trackName(s) === name);
+    }
+
+    linear() {
+      return this.track("main");
+    }
+
+    /* ex.nav: named menu items, each covering one or more screens ({label, screens}).
+       A sub-track screen (e.g. an artist page) belongs to the item of its `back` screen. */
+    navIndex(rec) {
+      const nav = this.ex.nav || [];
+      if (rec && rec.def.infoPage) rec = this.byId[this.infoFrom || rec.def.infoBack]; // an info page belongs to where it was opened from
+      for (let hop = 0; rec && hop < 5; hop++) {
+        const i = nav.findIndex((n) => n.screens.includes(rec.def.id));
+        if (i >= 0) return i;
+        rec = this.byId[rec.def.back];
+      }
+      return -1;
+    }
+
+    renderNav() {
+      this.ticks.innerHTML = "";
+      this.ex.nav.forEach((n, i) => {
+        const b = h("button", "tick");
+        b.dataset.nav = i;
+        const label = h("span", "tick-label");
+        b.appendChild(label);
+        b.addEventListener("click", () => this.go(n.screens[0]));
+        this.ticks.appendChild(b);
+      });
+    }
+
+    renderTicks(name) {
+      if (this.ex.nav) return; // one fixed menu for the whole exhibition
+      this.ticks.innerHTML = "";
+      const list = this.track(name);
+      if (list.length < 2) return;
+      list.forEach((s) => {
+        const b = h("button", "tick");
+        b.dataset.id = s.def.id;
+        b.setAttribute("aria-label", s.def.id);
+        b.addEventListener("click", () => this.go(s.def.id));
+        this.ticks.appendChild(b);
+      });
+    }
+
+    /* ---------- build DOM ---------- */
+    build() {
+      this.root.innerHTML = "";
+      this.stage = h("div", "stage");
+      this.stage.style.backgroundColor = this.color(this.ex.theme.bg || "black");
+      this.root.appendChild(this.stage);
+      // theme.grid: the layout grid's column lines under every screen, in the screen's ink colour
+      const g = this.ex.theme.grid;
+      if (g) {
+        const gm = Object.assign({}, g, this.mobile ? g.mobile : null);
+        const layer = h("div", "grid-bg");
+        Object.assign(layer.style, { left: gm.margin || "4vw", right: gm.margin || "4vw", gridTemplateColumns: `repeat(${gm.columns || 12}, 1fr)`, columnGap: gm.gutter || "1.6vw" });
+        layer.style.setProperty("--grid-o", gm.opacity != null ? gm.opacity : 0.08);
+        for (let i = 0; i < (gm.columns || 12); i++) layer.appendChild(h("div"));
+        this.stage.appendChild(layer);
+      }
+
+      this.ex.screens.forEach((def) => {
+        // def.mobile: screen-level overrides for narrow screens, e.g. {scroll: true, flow: true}
+        if (this.mobile && def.mobile) def = Object.assign({}, def, def.mobile);
+        const el = h("section", "screen");
+        el.dataset.id = def.id;
+        el.hidden = true;
+        if (def.scroll) el.classList.add("scrollable");
+        if (def.flow) el.classList.add("flow"); // flow: elements stacked one under another (box gives only width and margins)
+        // screen-level CSS variables, e.g. one scale unit shared by several elements
+        if (def.vars) Object.keys(def.vars).forEach((k) => el.style.setProperty(k, def.vars[k]));
+        if (def.scroll) el.addEventListener("scroll", () => this.onScroll(rec), { passive: true });
+        const rec = { def, el, elements: [] };
+        // a walkthrough screen also follows sideways trackpad swipes and ← → keys
+        rec.sideways = (def.elements || []).some((ed) => ed.type === "walkthrough");
+        // a screen with blob-zoom ends as soon as the image is fully open: no idle scrolling after it
+        const blobEnd = Math.max(0, ...(def.elements || []).filter((ed) => ed.blob).map((ed) => ed.blob.range[1]));
+        if (blobEnd) (def.elements || []).forEach((ed) => { if (ed.pin && ed.pin[1] > blobEnd) ed.pin = [ed.pin[0], blobEnd]; });
+        (def.elements || []).forEach((ed) => rec.elements.push(this.buildElement(ed, el)));
+        this.stage.appendChild(el);
+        this.screens.push(rec);
+        this.byId[def.id] = rec;
+      });
+
+      // chrome: language toggle, nav ticks, id label
+      const langs = this.ex.meta.langs || [];
+      this.chrome = h("div", "chrome");
+      if (langs.length > 1) {
+        this.langBtn = h("div", "lang");
+        langs.forEach((l) => {
+          const b = h("button", "lang-b");
+          b.textContent = l.toUpperCase();
+          b.addEventListener("click", () => this.setLang(l));
+          b.dataset.lang = l;
+          this.langBtn.appendChild(b);
+        });
+        this.chrome.appendChild(this.langBtn);
+      }
+      this.ticks = h("nav", "ticks");
+      this.chrome.appendChild(this.ticks);
+      if (this.ex.nav) this.renderNav();
+      if (this.ex.info) this.buildInfo();
+      if (this.ex.soundToggle) {
+        const st = h("div", "chrome-sound");
+        this.soundSwitch(st, st, this.ex.soundToggle === true ? {} : this.ex.soundToggle);
+        this.chrome.appendChild(st);
+      }
+      this.idLabel = h("div", "id-label");
+      this.chrome.appendChild(this.idLabel);
+      this.root.appendChild(this.chrome);
+      if (this.ex.theme.cursor === "square") this.cursorSquare();
+      this.refreshLang();
+    }
+
+    /* info-bubble (ex.info): a small swaying circle of texture with an "i", on every screen.
+       Where it leads: screen.info (a screen id), else ex.info.target; screen.info: false hides it.
+       On an info page (screen.infoPage) it shows × and leads back to where the visitor came from (else screen.infoBack).
+       Click: circle-open, the circle grows over the whole screen and the next page appears from under it. */
+    buildInfo() {
+      const b = h("button", "info-bubble");
+      b.setAttribute("aria-label", "Information");
+      const tex = h("span", "info-tex");
+      tex.style.backgroundImage = `url("${this.ex.info.texture}")`;
+      this.infoMark = h("span", "info-i");
+      b.appendChild(tex);
+      b.appendChild(this.infoMark);
+      b.addEventListener("click", () => this.openInfo());
+      this.chrome.appendChild(b);
+      this.infoBtn = b;
+    }
+
+    infoTarget(rec) {
+      if (!rec || !this.ex.info) return null;
+      if (rec.def.infoPage) return this.infoFrom || rec.def.infoBack || null;
+      if (rec.def.info === false) return null;
+      const t = rec.def.info || this.ex.info.target;
+      return this.byId[t] ? t : null;
+    }
+
+    updateInfo(rec) {
+      if (!this.infoBtn) return;
+      this.infoBtn.hidden = !this.infoTarget(rec);
+      this.infoMark.textContent = rec.def.infoPage ? "×" : "i";
+      this.infoBtn.setAttribute("aria-label", rec.def.infoPage ? "Close" : "Information");
+    }
+
+    async openInfo() {
+      const target = this.infoTarget(this.current);
+      if (!target || this.busy || this.opening) return;
+      this.opening = true;
+      if (!this.current.def.infoPage) this.infoFrom = this.current.def.id;
+      const r = this.infoBtn.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const R = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
+      const ov = h("div", "info-open");
+      ov.style.backgroundImage = `url("${this.ex.info.texture}")`;
+      document.body.appendChild(ov);
+      const grow = ov.animate(
+        [{ clipPath: `circle(${r.width / 2}px at ${cx}px ${cy}px)`, filter: "brightness(1)" }, { clipPath: `circle(${R}px at ${cx}px ${cy}px)`, filter: "brightness(.85)" }],
+        { duration: this.ex.info.duration || 1000, easing: "cubic-bezier(.65,0,.35,1)", fill: "forwards" }
+      );
+      try { await grow.finished; } catch (e) { /* cancelled */ }
+      await this.go(target);
+      const fade = ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: "ease-out", fill: "forwards" });
+      try { await fade.finished; } catch (e) { /* cancelled */ }
+      ov.remove();
+      this.opening = false;
+    }
+
+    /* cursor-square: the pointer becomes a square that inverts what is under it (white on black, black on white).
+       Only for mouse / trackpad; touch screens keep their normal behaviour. */
+    cursorSquare() {
+      if (!matchMedia("(pointer: fine)").matches) return;
+      const c = h("div", "cursor-square");
+      document.body.appendChild(c);
+      document.documentElement.classList.add("has-cursor-square");
+      const LINK = ".clickable, button, a, .tick";
+      window.addEventListener("pointermove", (e) => {
+        c.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+        c.classList.add("on");
+        c.classList.toggle("over-link", !!(e.target.closest && e.target.closest(LINK)));
+      }, { passive: true });
+      document.documentElement.addEventListener("pointerleave", () => c.classList.remove("on"));
+    }
+
+    buildElement(ed, screenEl) {
+      // ed.mobile: overrides for narrow screens (theme.mobileMax, default 700px), e.g. {box: {...}, paragraphs: [...]}
+      if (this.mobile && ed.mobile) ed = Object.assign({}, ed, ed.mobile, { box: Object.assign({}, ed.box, ed.mobile.box) });
+      const node = h("div", "el el-" + ed.type);
+      node.dataset.id = ed.id;
+      const inner = h("div", "inner");
+      node.appendChild(inner);
+      const box = ed.box || {};
+      Object.keys(box).forEach((k) => {
+        const v = box[k];
+        node.style[BOX[k] || k] = typeof v === "number" ? v + (k === "y" || k === "h" || k === "top" || k === "bottom" || k === "height" ? "vh" : "vw") : v;
+      });
+      if (ed.hide) node.style.display = "none"; // e.g. mobile: {hide: true}
+      if (ed.mat) { node.classList.add("mat-" + ed.mat); if (ed.matSize) node.style.setProperty("--mat", ed.matSize); } // mat: "white" passe-partout
+      if (ed.z != null) node.style.zIndex = ed.z;
+      if (ed.opacity != null) inner.style.opacity = ed.opacity; // on the inner box, so enter effects on the node don't override it
+      if (ed.hover) node.classList.add("hover-" + ed.hover);
+      if (ed.goto) {
+        node.classList.add("clickable");
+        node.addEventListener("click", () => this.go(ed.goto));
+        node.tabIndex = 0;
+        node.addEventListener("keydown", (e) => { if (e.key === "Enter") this.go(ed.goto); });
+      }
+      const rec = { def: ed, node, inner, targets: [{ node, extra: 0 }], texts: [] };
+      const builder = this["build_" + ed.type];
+      if (!builder) console.warn("Unknown element type:", ed.type);
+      else builder.call(this, ed, rec, screenEl);
+      (ed.pin ? this.pinHost(screenEl, ed.pin) : screenEl).appendChild(node);
+      return rec;
+    }
+
+    /* pin: [fromVh, toVh]. Pinned elements sit in a CSS `position: sticky` layer, so the browser
+       holds them still while the screen scrolls (no scroll-event lag, no jitter). */
+    pinHost(screenEl, pin) {
+      screenEl._pins = screenEl._pins || {};
+      const key = pin.join("-");
+      if (!screenEl._pins[key]) {
+        const track = h("div", "pin-track", { top: pin[0] + "vh", height: pin[1] - pin[0] + 100 + "vh" });
+        const layer = h("div", "pin-layer");
+        track.appendChild(layer);
+        screenEl.appendChild(track);
+        screenEl._pins[key] = layer;
+      }
+      return screenEl._pins[key];
+    }
+
+    typeStyle(ed, target) {
+      const t = (this.ex.theme.type || {})[ed.role || "body"] || {};
+      const s = target.style;
+      s.fontSize = ed.size || t.size || "";
+      s.fontWeight = ed.weight || t.weight || "";
+      s.lineHeight = ed.lh || t.lh || "";
+      s.letterSpacing = ed.ls || t.ls || "";
+      s.textTransform = ed.case || t.case || "";
+      s.textAlign = ed.align || "";
+      s.fontStyle = ed.italic ? "italic" : "";
+      s.color = this.color(ed.color || t.color || "white");
+    }
+
+    build_text(ed, rec) {
+      const list = ed.paragraphs || [ed.text];
+      list.forEach((p, i) => {
+        const pe = h("p", "para" + (ed.indent && i > 0 ? " indent" : ""));
+        this.typeStyle(ed, pe);
+        if (ed.gap != null) pe.style.marginTop = i ? ed.gap : 0;
+        rec.inner.appendChild(pe);
+        rec.texts.push({ node: pe, value: p, rich: true });
+        if (ed.stagger) rec.targets.push({ node: pe, extra: i * ed.stagger });
+      });
+      if (ed.stagger) rec.targets.shift();
+    }
+
+    build_image(ed, rec) {
+      const img = h("img");
+      img.alt = ed.alt || "";
+      img.src = ed.src;
+      img.style.objectFit = ed.fit || "cover";
+      if (ed.focus) img.style.objectPosition = ed.focus; // which part stays in view when cropped, e.g. "50% 30%"
+      if (ed.shape === "circle") rec.node.classList.add("img-circle"); // round frame, square box
+      if (ed.shape !== "circle" && (!ed.box || ed.box.h == null && ed.box.height == null)) {
+        const setRatio = () => { if (img.naturalWidth) rec.node.style.aspectRatio = img.naturalWidth + "/" + img.naturalHeight; };
+        img.addEventListener("load", setRatio);
+        if (img.complete) setRatio();
+      } else {
+        rec.inner.style.height = "100%";
+      }
+      if (ed.parallax) {
+        // frame-parallax: image is taller than its frame and drifts inside it while scrolling
+        const a = Math.abs(ed.parallax);
+        rec.node.style.overflow = "hidden";
+        img.style.height = `calc(100% + ${2 * a}%)`;
+        img.style.position = "relative";
+        img.style.top = `-${a}%`;
+        img.style.willChange = "transform";
+        rec.parallaxImg = img;
+      }
+      rec.inner.appendChild(img);
+      rec.node.style.position = "absolute";
+      if (ed.zoom != null ? ed.zoom : this.ex.theme.zoom) {
+        // zoom: click opens the image full screen (see openLightbox)
+        img.classList.add("zoomable");
+        img.addEventListener("click", () => this.openLightbox(rec));
+      }
+      if (ed.caption) {
+        // caption: a short visible line under the image (title, year, technique, size)
+        const cap = h("p", "img-caption");
+        this.typeStyle({ role: ed.captionRole || "caption", color: ed.captionColor }, cap);
+        rec.node.appendChild(cap);
+        rec.texts.push({ node: cap, value: ed.caption, rich: true });
+      }
+      if (ed.credit) this.creditButton(ed, rec);
+    }
+
+    /* credit: a small "i" at the image's corner; click opens the caption (title, author, source, licence, changes) */
+    creditButton(ed, rec) {
+      const b = h("button", "credit-i");
+      b.type = "button";
+      b.textContent = "i";
+      b.setAttribute("aria-label", "Image credit");
+      b.setAttribute("aria-expanded", "false");
+      const panel = h("div", "credit-panel");
+      panel.hidden = true;
+      (Array.isArray(ed.credit) ? ed.credit : [ed.credit]).forEach((line) => {
+        const pe = h("p", "credit-line");
+        this.typeStyle({ role: "caption", color: ed.creditColor || "ink" }, pe);
+        panel.appendChild(pe);
+        rec.texts.push({ node: pe, value: line, rich: true });
+      });
+      const toggle = (open) => {
+        panel.hidden = !open;
+        b.classList.toggle("on", open);
+        b.textContent = open ? "×" : "i";
+        b.setAttribute("aria-expanded", String(open));
+      };
+      b.addEventListener("click", (e) => { e.stopPropagation(); toggle(panel.hidden); });
+      document.addEventListener("click", (e) => { if (!panel.hidden && !panel.contains(e.target)) toggle(false); });
+      rec.node.appendChild(b);
+      rec.node.appendChild(panel);
+    }
+
+    build_rule(ed, rec) {
+      rec.inner.style.background = this.color(ed.color || "white");
+      rec.inner.style.height = "100%";
+      rec.inner.style.width = "100%";
+    }
+
+    /* empty frame for an image to be added later; visible only in debug (D) */
+    build_slot(ed, rec) {
+      rec.node.classList.add("slot");
+      rec.inner.style.height = "100%";
+      rec.inner.textContent = ed.note || "image";
+    }
+
+    /* line: an SVG drawing (ed.paths: path data in ed.viewBox units). Pairs with the "draw" enter effect. */
+    build_line(ed, rec) {
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", ed.viewBox || "0 0 1000 1000");
+      svg.setAttribute("preserveAspectRatio", ed.fit || "xMidYMid meet");
+      svg.setAttribute("aria-hidden", "true");
+      (ed.paths || []).forEach((d) => {
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", typeof d === "string" ? d : d.d);
+        p.setAttribute("fill", d && d.fill ? this.color(d.fill) : "none");
+        p.setAttribute("stroke", d && d.fill && !d.stroke ? "none" : this.color((d && d.stroke) || ed.stroke || "ink"));
+        p.setAttribute("stroke-width", (d && d.width) || ed.width || 2);
+        p.setAttribute("stroke-linecap", "round");
+        p.setAttribute("stroke-linejoin", "round");
+        p.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(p);
+      });
+      if (ed.clip) svg.style.overflow = "hidden"; // clip: true keeps the strokes inside the element's box
+      rec.inner.style.height = "100%";
+      rec.inner.appendChild(svg);
+    }
+
+    /* grid: thin column lines of the layout grid (Bauhaus: strict grid under the free line) */
+    build_grid(ed, rec) {
+      rec.node.classList.add("grid-lines");
+      const n = ed.columns || 12;
+      Object.assign(rec.node.style, { left: ed.margin || "4vw", right: ed.margin || "4vw", top: 0, bottom: 0, pointerEvents: "none" });
+      Object.assign(rec.inner.style, { height: "100%", display: "grid", gridTemplateColumns: `repeat(${n}, 1fr)`, columnGap: ed.gutter || "1.6vw" });
+      for (let i = 0; i < n; i++) {
+        const c = h("div", "", { borderLeft: `1px solid ${this.color(ed.color || "ink")}`, borderRight: `1px solid ${this.color(ed.color || "ink")}`, opacity: ed.opacity != null ? ed.opacity : 0.06 });
+        rec.inner.appendChild(c);
+      }
+    }
+
+    /* button: pill-shaped, {text, goto, variant: "solid" | "link", color: theme colour (solid: fill, link: text + underline), arrow: true} */
+    makeButton(it) {
+      const v = it.variant || "solid";
+      const b = h("a", "btn btn-" + v + " clickable");
+      b.setAttribute("role", "button");
+      b.tabIndex = 0;
+      const c = this.color(it.color || (v === "link" ? "accent" : "ink"));
+      b.style.setProperty("--btn-c", c);
+      const label = h("span", "btn-label");
+      this.typeStyle({ role: it.role || "button", color: "inherit" }, label);
+      label.style.color = "";
+      b.appendChild(label);
+      if (it.arrow) b.appendChild(h("span", "btn-arrow")).textContent = "→";
+      if (it.goto) {
+        b.addEventListener("click", (e) => { e.stopPropagation(); this.go(it.goto); });
+        b.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.stopPropagation(); this.go(it.goto); } });
+      }
+      return { node: b, label };
+    }
+
+    build_button(ed, rec) {
+      const { node, label } = this.makeButton(Object.assign({}, ed, { goto: null }));
+      rec.inner.appendChild(node);
+      rec.texts.push({ node: label, value: ed.text });
+    }
+
+    /* buttons: a row of buttons, {items: [{text, goto, variant, color, arrow}], gap} */
+    build_buttons(ed, rec) {
+      Object.assign(rec.inner.style, { display: "flex", flexWrap: "wrap", alignItems: "center", gap: ed.gap || "2.2em" });
+      (ed.items || []).forEach((it) => {
+        const { node, label } = this.makeButton(it);
+        rec.inner.appendChild(node);
+        rec.texts.push({ node: label, value: it.text });
+      });
+    }
+
+    /* route: a life drawn as one line. Across: time (years); up and down: a second value, e.g. latitude.
+       {stops: [{label, note, year, value, side: "above" | "below", break: true}], end: {year, value},
+        years: [from, to], values: [min, max], ticks: [years], vertical: false, current: stop index}
+       A stop with break: true draws the segment leading to it in the accent colour (a rupture).
+       With enter {effect: "route"} the line draws itself and each stop appears as the line reaches it. */
+    build_route(ed, rec) {
+      const NS = "http://www.w3.org/2000/svg";
+      const [y0, y1] = ed.years, [v0, v1] = ed.values;
+      const vert = !!ed.vertical;
+      // position in % of the box: time runs left→right (or top→bottom when vertical), value runs bottom→top (or left→right)
+      const pos = (year, val) => {
+        const t = (year - y0) / (y1 - y0), u = (val - v0) / (v1 - v0);
+        return vert ? [u * 100, t * 100] : [t * 100, (1 - u) * 100];
+      };
+      const pts = ed.stops.map((st) => pos(st.year, st.value));
+      if (ed.end) pts.push(pos(ed.end.year, ed.end.value));
+      rec.node.classList.add("route");
+      rec.inner.style.height = "100%";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("aria-hidden", "true");
+      rec.inner.appendChild(svg);
+      // smooth segments between neighbouring points (Catmull-Rom → Bézier)
+      const segs = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        segs.push([p1, c1, c2, p2]);
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", `M ${p1} C ${c1} ${c2} ${p2}`.replace(/,/g, " "));
+        p.setAttribute("class", "route-seg");
+        const rupture = ed.stops[i + 1] && ed.stops[i + 1].break;
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke", this.color(rupture ? ed.breakColor || "accent" : ed.stroke || "ink"));
+        if (ed.mini && !rupture) p.style.stroke = "var(--chrome-fg)"; // the small map takes the screen's ink, light or dark
+        p.setAttribute("stroke-width", ed.width || 2);
+        p.setAttribute("stroke-linecap", "round");
+        p.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(p);
+      }
+      if (ed.mini) rec.node.classList.add("route-mini");
+      if (ed.at != null) {
+        // "you are here": a marker on the line at a year (value interpolated between the neighbouring stops)
+        // exactly on the drawn curve: find the segment that spans the year, then solve the Bézier for that time
+        const tAt = (pos(ed.at, v0)[vert ? 1 : 0]);
+        const ax = vert ? 1 : 0;
+        const bez = (sg, t) => [0, 1].map((j) => { const u = 1 - t; return u * u * u * sg[0][j] + 3 * u * u * t * sg[1][j] + 3 * u * t * t * sg[2][j] + t * t * t * sg[3][j]; });
+        const sg = segs.find((q) => (q[0][ax] - tAt) * (q[3][ax] - tAt) <= 0) || segs[segs.length - 1];
+        let lo = 0, hi = 1;
+        const up = sg[3][ax] >= sg[0][ax];
+        for (let it = 0; it < 30; it++) { const m = (lo + hi) / 2; if ((bez(sg, m)[ax] < tAt) === up) lo = m; else hi = m; }
+        const [x, y] = bez(sg, (lo + hi) / 2);
+        const here = h("div", "route-here");
+        here.style.left = x + "%";
+        here.style.top = y + "%";
+        if (ed.atLabel) {
+          const l = h("span", "route-here-label");
+          this.typeStyle({ role: "caption", color: ed.atColor }, l);
+          here.appendChild(l);
+          rec.texts.push({ node: l, value: ed.atLabel, rich: true });
+        }
+        rec.inner.appendChild(here);
+        // on the small map the label sits under the map, not next to the marker
+        if (ed.mini && here.firstChild) { here.firstChild.classList.add("route-mini-label"); rec.inner.appendChild(here.firstChild); }
+      }
+      if (ed.mini) {
+        ed.stops.forEach((st, i) => {
+          const d = h("span", "route-stop route-mini-dot" + (st.break ? " rupture" : ""));
+          d.style.left = pts[i][0] + "%";
+          d.style.top = pts[i][1] + "%";
+          rec.inner.insertBefore(d, rec.inner.querySelector(".route-here"));
+        });
+        return;
+      }
+      ed.stops.forEach((st, i) => {
+        const [x, y] = pts[i];
+        const stop = h("div", "route-stop" + (ed.current === i ? " current" : "") + (st.break ? " rupture" : ""));
+        stop.style.left = x + "%";
+        stop.style.top = y + "%";
+        const side = st.side || (vert ? (x > 50 ? "left" : "right") : "above");
+        stop.classList.add("side-" + side);
+        stop.appendChild(h("span", "route-dot"));
+        const lab = h("div", "route-label");
+        const name = h("p", "route-name");
+        this.typeStyle({ role: ed.labelRole || "label" }, name);
+        lab.appendChild(name);
+        rec.texts.push({ node: name, value: st.label });
+        if (st.note) {
+          const note = h("p", "route-note");
+          this.typeStyle({ role: "caption" }, note);
+          lab.appendChild(note);
+          rec.texts.push({ node: note, value: st.note, rich: true });
+        }
+        stop.appendChild(lab);
+        rec.inner.appendChild(stop);
+      });
+      if (ed.end && ed.end.label) {
+        const [x, y] = pts[pts.length - 1];
+        const endl = h("p", "route-end");
+        this.typeStyle({ role: "caption" }, endl);
+        Object.assign(endl.style, { left: x + "%", top: y + "%" });
+        rec.inner.appendChild(endl);
+        rec.texts.push({ node: endl, value: ed.end.label, rich: true });
+      }
+      // time axis
+      (ed.ticks || []).forEach((yr) => {
+        const [x, y] = pos(yr, v0);
+        const t = h("span", "route-tick");
+        this.typeStyle({ role: "caption" }, t);
+        t.textContent = yr;
+        if (vert) Object.assign(t.style, { left: "-0.5em", top: y + "%", transform: "translate(-100%, -50%)" });
+        else Object.assign(t.style, { left: x + "%", top: "100%", transform: "translate(-50%, 1.2em)" });
+        rec.inner.appendChild(t);
+      });
+    }
+
+    /* counter: a number that counts up on enter (effect "count") with a line drawn under it.
+       {value, decimals, prefix, suffix, label, underline: theme colour or false} */
+    build_counter(ed, rec) {
+      const num = h("div", "counter-num");
+      this.typeStyle({ role: ed.role || "numeral", color: ed.color }, num);
+      num.dataset.value = ed.value;
+      num.dataset.decimals = ed.decimals || 0;
+      num.dataset.prefix = ed.prefix || "";
+      num.dataset.suffix = ed.suffix || "";
+      num.textContent = FX.formatNumber(ed.value, ed.decimals || 0, ed.prefix, ed.suffix);
+      rec.inner.appendChild(num);
+      if (ed.underline !== false) {
+        const NS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("class", "counter-line");
+        svg.setAttribute("viewBox", "0 0 100 6");
+        svg.setAttribute("preserveAspectRatio", "none");
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", "M 0 3 C 30 1.5, 70 4.5, 100 3");
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke", this.color(ed.underline || "accent"));
+        p.setAttribute("stroke-width", 2);
+        p.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(p);
+        rec.inner.appendChild(svg);
+      }
+      if (ed.label) {
+        const l = h("p", "counter-label");
+        this.typeStyle({ role: ed.labelRole || "caption", color: ed.labelColor }, l);
+        rec.inner.appendChild(l);
+        rec.texts.push({ node: l, value: ed.label, rich: true });
+      }
+    }
+
+    /* sound: toggle for the whole exhibition. Off by default; the choice is remembered.
+       As an element (type "sound") or, with ex.soundToggle, fixed in the chrome on every screen. */
+    build_sound(ed, rec) {
+      this.soundSwitch(rec.node, rec.inner, ed);
+    }
+
+    soundSwitch(node, inner, ed) {
+      node.classList.add("sound-toggle", "clickable");
+      node.setAttribute("role", "switch");
+      node.tabIndex = 0;
+      const mark = h("span", "sound-mark");
+      const label = h("span", "sound-label");
+      this.typeStyle({ role: ed.role || "label", color: ed.color }, label);
+      if (!ed.color) label.style.color = "";
+      inner.appendChild(mark);
+      inner.appendChild(label);
+      // speaker icon: shown instead of the dot and the words where there is no room (chrome toggle on phones)
+      const icon = h("span", "sound-icon");
+      icon.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="si-body" d="M3.5 9.2 H7.4 L12.6 4.8 V19.2 L7.4 14.8 H3.5 Z"/><path class="si-on" d="M15.6 9.1 C16.9 10.7 16.9 13.3 15.6 14.9 M18.4 6.6 C21.1 9.8 21.1 14.2 18.4 17.4"/><path class="si-off" d="M16 9.5 L21 14.5 M21 9.5 L16 14.5"/></svg>';
+      inner.appendChild(icon);
+      // both labels sit in one grid cell, so the switch keeps the width of the longer one and the dot never moves
+      const offL = h("span", "sl-off"), onL = h("span", "sl-on");
+      offL.textContent = this.tr(ed.off || "Sound off");
+      onL.textContent = this.tr(ed.on || "Sound on");
+      label.appendChild(offL);
+      label.appendChild(onL);
+      const show = () => {
+        node.classList.toggle("on", this.sound);
+        node.setAttribute("aria-checked", String(this.sound));
+        node.setAttribute("aria-label", this.sound ? onL.textContent : offL.textContent);
+      };
+      const flip = () => {
+        this.sound = !this.sound;
+        try { localStorage.setItem("ex-sound", this.sound ? "1" : "0"); } catch (e) { /* ignore */ }
+        window.dispatchEvent(new CustomEvent("ex-sound", { detail: this.sound }));
+        document.querySelectorAll(".sound-toggle").forEach((n) => n._show && n._show());
+        this.updateSound();
+      };
+      node._show = show;
+      node.addEventListener("click", flip);
+      node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } });
+      show();
+    }
+
+    /* screen.sound {src, volume, loop, fadeIn, fadeOut}: plays while that screen is open and sound is on.
+       Screens that share the same src keep it playing across them. */
+    updateSound() {
+      const s = this.current && this.current.def.sound;
+      const want = this.sound && s ? s.src : null;
+      if (this.audioSrc === want) return;
+      const fade = (a, to, ms, done) => {
+        cancelAnimationFrame(a._raf);
+        const from = a.volume, t0 = performance.now();
+        const step = (now) => {
+          const k = ms ? Math.min(1, (now - t0) / ms) : 1;
+          a.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+          if (k < 1) a._raf = requestAnimationFrame(step); else if (done) done();
+        };
+        a._raf = requestAnimationFrame(step);
+      };
+      if (this.audio) {
+        const old = this.audio;
+        fade(old, 0, (this.audioDef && this.audioDef.fadeOut) || 1200, () => old.pause());
+      }
+      this.audio = null;
+      this.audioSrc = want;
+      this.audioDef = s;
+      if (!want) return;
+      const a = new Audio(want);
+      a.loop = s.loop !== false;
+      a.volume = 0;
+      a.play().then(() => fade(a, s.volume != null ? s.volume : 0.6, s.fadeIn || 2000)).catch(() => { /* blocked until the visitor interacts */ });
+      this.audio = a;
+    }
+
+    /* list of big names; hovering a row shows its preview image in a fixed place */
+    build_list(ed, rec, screenEl) {
+      rec.targets = [];
+      let preview = null;
+      let pimg = null;
+      if (ed.preview) {
+        preview = h("div", "list-preview");
+        const pb = ed.preview.box || {};
+        Object.keys(pb).forEach((k) => { preview.style[BOX[k] || k] = pb[k]; });
+        pimg = h("img");
+        pimg.alt = "";
+        preview.appendChild(pimg);
+        screenEl.appendChild(preview);
+      }
+      (ed.items || []).forEach((it, i) => {
+        const row = h("div", "list-item" + (it.goto ? " clickable" : ""));
+        row.dataset.id = it.id;
+        this.typeStyle({ role: ed.role || "title", color: ed.color, align: ed.align }, row);
+        rec.texts.push({ node: row, value: it.label, rich: false });
+        if (it.goto) {
+          row.tabIndex = 0;
+          row.addEventListener("click", () => this.go(it.goto));
+          row.addEventListener("keydown", (e) => { if (e.key === "Enter") this.go(it.goto); });
+        }
+        if (preview && it.src) {
+          const pre = new Image();
+          pre.src = it.src;
+          row.addEventListener("mouseenter", () => { pimg.src = it.src; preview.classList.add("on"); });
+          row.addEventListener("mouseleave", () => preview.classList.remove("on"));
+        }
+        rec.inner.appendChild(row);
+        rec.targets.push({ node: row, extra: i * (ed.stagger != null ? ed.stagger : 90) });
+      });
+    }
+
+    /* blob-zoom: a full-screen image seen through a blob-shaped window. Scrolling zooms into the blob until
+       its lobe fills the screen and the whole image is revealed. See FX.scrollFx["blob-zoom"].
+       Built from two transformed layers (window scales up, image scales down by the same factor), so
+       scrolling only changes transforms: no repaint, no jitter. */
+    build_blobzoom(ed, rec) {
+      const b = ed.blob;
+      rec.blob = b;
+      rec.node.style.cssText += ";left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden";
+      rec.inner.style.height = "100%";
+      const win = h("div", "bz-win");
+      const m = `url("${b.mask}")`;
+      win.style.webkitMaskImage = win.style.maskImage = m;
+      win.style.webkitMaskRepeat = win.style.maskRepeat = "no-repeat";
+      win.style.webkitMaskSize = win.style.maskSize = "100% 100%";
+      const img = h("img", "bz-img");
+      img.alt = ed.alt || "";
+      img.src = ed.src;
+      win.appendChild(img);
+      rec.inner.appendChild(win);
+      rec.bzWin = win;
+      rec.bzImg = img;
+      this.layoutBlob(rec);
+      this.applyBlob(rec, 0);
+    }
+
+    layoutBlob(rec) {
+      const b = rec.blob;
+      const vw = innerWidth / 100;
+      const vh = innerHeight / 100;
+      const w0 = b.box.width * vw;
+      rec.bzWin.style.width = w0 + "px";
+      rec.bzWin.style.height = w0 * b.aspect + "px";
+      rec.bzImg.style.left = -b.box.left * vw + "px";
+      rec.bzImg.style.top = -b.box.top * vh + "px";
+      rec.bzImg.style.width = innerWidth + "px";
+      rec.bzImg.style.height = innerHeight + "px";
+    }
+
+    blobSample(rec, px) {
+      const b = rec.blob;
+      const vw = innerWidth / 100;
+      const vh = innerHeight / 100;
+      const [s0, s1] = b.range;
+      const p = Math.min(Math.max((px / vh - s0) / (s1 - s0), 0), 1);
+      const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; // easeInOutCubic
+      const [fx, fy] = b.focal;
+      const w0 = b.box.width * vw;
+      const h0 = w0 * b.aspect;
+      const w1 = (Math.hypot(innerWidth, innerHeight) / 2 * 1.08) / b.lobeR;
+      const s = Math.pow(w1 / w0, e);
+      const a0x = b.box.left * vw + fx * w0;
+      const a0y = b.box.top * vh + fy * h0;
+      const ax = a0x + (innerWidth / 2 - a0x) * e;
+      const ay = a0y + (innerHeight / 2 - a0y) * e;
+      const Tx = ax - s * fx * w0;
+      const Ty = ay - s * fy * h0;
+      const tx = -Tx / s + b.box.left * vw;
+      const ty = -Ty / s + b.box.top * vh;
+      return {
+        win: `translate(${Tx}px, ${Ty}px) scale(${s})`,
+        img: `matrix(${1 / s}, 0, 0, ${1 / s}, ${tx}, ${ty})`
+      };
+    }
+
+    applyBlob(rec, px) {
+      const f = this.blobSample(rec, px);
+      rec.bzWin.style.transform = f.win;
+      rec.bzImg.style.transform = f.img;
+    }
+
+    /* embed: an external page in a frame, e.g. an Instagram post (src = …/p/<id>/embed) */
+    build_embed(ed, rec) {
+      const f = h("iframe");
+      f.src = ed.src;
+      f.title = ed.alt || "";
+      f.loading = "lazy";
+      f.setAttribute("allowtransparency", "true");
+      f.setAttribute("scrolling", "no");
+      f.style.cssText = "display:block;width:100%;height:100%;border:0;background:#fff";
+      rec.inner.style.height = "100%";
+      rec.inner.appendChild(f);
+    }
+
+    /* walkthrough: the rooms of the exhibition side by side (photo + text), walked through from left to right
+       while the screen scrolls down. Inside each photo the image lags behind (parallax) and comes slightly
+       closer as the room reaches the middle; a counter and a progress line sit bottom left.
+       Scroll-linked parts are driven from bindScroll (transform / opacity only). */
+    build_walkthrough(ed, rec) {
+      if (this.mobile) return this.walkList(ed, rec);
+      const stage = h("div", "wt-stage");
+      const strip = h("div", "wt-strip");
+      stage.appendChild(strip);
+      rec.inner.style.height = "100%"; // the sticky stage needs the full scroll length to stay pinned
+      rec.inner.appendChild(stage);
+      const text = (parent, cls, value, style) => {
+        const p = h("p", "para" + (cls ? " " + cls : ""));
+        this.typeStyle(style, p);
+        parent.appendChild(p);
+        rec.texts.push({ node: p, value, rich: true });
+        return p;
+      };
+      const intro = h("div", "wt-intro", { width: ed.intro || "26vw", paddingLeft: "7vw" });
+      intro.style.flexDirection = "column";
+      intro.style.alignItems = "flex-start";
+      intro.style.justifyContent = "center";
+      intro.style.gap = "3vh";
+      if (ed.introTitle) text(intro, "", ed.introTitle, { role: ed.introTitleRole || "title", color: ed.introColor || "light" });
+      if (ed.introText) text(intro, "wt-intro-text", ed.introText, { role: "body", color: ed.introColor || "light" });
+      if (ed.hint) text(intro, "", ed.hint, { role: ed.hintRole || "caption", color: "grey" });
+      strip.appendChild(intro);
+      const par = ed.parallax != null ? ed.parallax : 8;
+      const rooms = (ed.items || []).map((it, i) => {
+        const room = h("div", "wt-room", { display: "flex", marginRight: i < ed.items.length - 1 ? ed.gap || "10vw" : ed.tail || 0 });
+        room.dataset.id = it.id;
+        const frame = h("div", "wt-photo", { width: `calc(100vh * ${it.ratio || 4 / 3})` });
+        let img;
+        if (it.slides) {
+          // slides: several photos in one frame; only the arrows change them (scrolling keeps walking)
+          img = h("div", "wt-slides");
+          const shots = it.slides.map((sl, k) => {
+            const im = h("img", k ? "" : "on");
+            im.src = sl.src;
+            im.alt = sl.alt || "";
+            img.appendChild(im);
+            return im;
+          });
+          let cur = 0;
+          const ctl = h("div", "wt-slide-ctl");
+          const count = h("span", "wt-slide-count");
+          this.typeStyle({ role: "label", color: "white" }, count);
+          const go = (d) => {
+            shots[cur].classList.remove("on");
+            cur = (cur + d + shots.length) % shots.length;
+            shots[cur].classList.add("on");
+            count.textContent = `${cur + 1}/${shots.length}`;
+          };
+          const arrow = (t, d, aria) => { const b = h("button", "wt-slide-btn"); b.type = "button"; b.textContent = t; b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); go(d); }); return b; };
+          ctl.appendChild(arrow("←", -1, "Previous photo"));
+          ctl.appendChild(count);
+          ctl.appendChild(arrow("→", 1, "Next photo"));
+          go(0);
+          frame.appendChild(ctl);
+        } else {
+          img = h("img");
+          img.src = it.src;
+          img.alt = it.alt || "";
+        }
+        img.style.width = `${100 + 2 * par}%`;
+        img.style.left = `-${par}%`;
+        frame.insertBefore(img, frame.firstChild);
+        const panel = h("div", "wt-text", { width: ed.textWidth || "40vw", padding: ed.textPadding || "10vh 4vw 0 5vw" });
+        if (it.artist) {
+          const a = h("div", "wt-artist hover-underline" + (it.goto ? " clickable" : ""));
+          text(a, "", it.artist, { role: "caption", color: "grey" });
+          if (it.goto) a.addEventListener("click", () => this.go(it.goto));
+          panel.appendChild(a);
+        }
+        (it.works || []).forEach((w, j) => {
+          text(panel, "", w.title, { role: ed.titleRole || "lead", weight: 500, color: ed.titleColor || "light" }).style.marginTop = j ? "2vh" : 0;
+          text(panel, "", w.medium, { role: ed.titleRole || "lead", weight: 500, color: "grey" });
+        });
+        panel.lastChild.classList.add("wt-medium");
+        (it.paragraphs || []).forEach((p, j) => text(panel, j ? "indent" : "", p, { role: "body", color: "light" }));
+        if (it.credits) {
+          const c = h("div", "wt-credits");
+          it.credits.forEach((p, j) => text(c, "", p, { role: "caption", color: "grey", italic: true }).style.marginTop = j ? "1.2em" : 0);
+          panel.appendChild(c);
+        }
+        panel.addEventListener("scroll", () => this.walkFade(panel), { passive: true }); // only toggles the fades
+        room.appendChild(frame);
+        room.appendChild(panel);
+        strip.appendChild(room);
+        return { frame, img, panel };
+      });
+      const dotsNav = ed.nav === "dots";
+      const hud = h("div", "wt-hud" + (dotsNav ? " wt-hud-dots" : ""));
+      const labels = h("div", "wt-labels");
+      const n = rooms.length;
+      const labelNodes = (ed.items || []).map((it, i) => {
+        const value = dotsNav ? it.artist : { en: `${String(i + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}   ${this.tr(it.artist)}` };
+        const l = text(labels, "wt-label", value, { role: dotsNav ? "small" : "caption", color: "light" });
+        l.style.whiteSpace = "pre";
+        return l;
+      });
+      const bar = h("div", "wt-bar");
+      const fill = h("div", "wt-bar-fill");
+      bar.appendChild(fill);
+      let dots = null;
+      if (dotsNav) {
+        // dots: one circle per room, the current one filled; click a circle to walk there
+        const row = h("div", "wt-dots");
+        dots = (ed.items || []).map((it, i) => {
+          const d = h("button", "wt-dot");
+          d.type = "button";
+          d.setAttribute("aria-label", this.tr(it.artist));
+          const f = h("span", "wt-dot-fill");
+          d.appendChild(f);
+          d.addEventListener("click", () => {
+            const r = rooms[i], scr = rec.node.closest(".screen");
+            if (!scr || r.x == null) return;
+            scr.scrollTo({ top: Math.max(0, Math.min(rec.walk.travel, r.x + r.w / 2 - innerWidth / 2)), behavior: "smooth" });
+          });
+          row.appendChild(d);
+          return f;
+        });
+        hud.appendChild(row);
+        hud.appendChild(labels);
+      } else {
+        hud.appendChild(labels);
+        hud.appendChild(bar);
+      }
+      if (ed.credit) text(hud, "", ed.credit, { role: "caption", color: "grey" }).style.marginTop = "10px";
+      stage.appendChild(hud);
+      rec.walk = { strip, rooms, labels: labelNodes, dots, fill, hud, par, tail: ed.tail, textBottom: ed.textBottom };
+    }
+
+    /* walkthrough on a phone: the rooms stacked one under another (photo, then text), scrolled normally */
+    walkList(ed, rec) {
+      rec.node.classList.add("wt-list");
+      const text = (parent, value, style) => {
+        const p = h("p", "para");
+        this.typeStyle(style, p);
+        parent.appendChild(p);
+        rec.texts.push({ node: p, value, rich: true });
+        return p;
+      };
+      const head = h("div", "wt-list-head");
+      if (ed.introTitle) text(head, ed.introTitle, { role: "title", color: ed.introColor || "light" });
+      if (ed.introText) text(head, ed.introText, { role: "body", color: ed.introColor || "light" });
+      rec.inner.appendChild(head);
+      (ed.items || []).forEach((it) => {
+        const item = h("div", "wt-list-item");
+        const img = h("img");
+        img.src = it.src || (it.slides && it.slides[0].src);
+        img.alt = it.alt || (it.slides && it.slides[0].alt) || "";
+        item.appendChild(img);
+        if (it.artist) text(item, it.artist, { role: "label", color: "grey" });
+        (it.works || []).forEach((w) => { text(item, w.title, { role: "lead", weight: 500, color: ed.titleColor || "light" }); text(item, w.medium, { role: "body", color: "grey" }); });
+        (it.paragraphs || []).forEach((p) => text(item, p, { role: "body", color: "light" }));
+        (it.credits || []).forEach((p) => text(item, p, { role: "caption", color: "grey", italic: true }));
+        rec.inner.appendChild(item);
+      });
+    }
+
+    /* walkthrough geometry, measured whenever the screen is (re)bound: the screen scrolls exactly as far as the strip travels.
+       Texts stay where they are while walking. A text longer than the space above the counter is cut off with a fade
+       and scrolls by itself under the cursor (wheel over the text); once it is read, scrolling walks on. */
+    layoutWalk(rec) {
+      const w = rec.walk;
+      const W = innerWidth;
+      const H = innerHeight;
+      // after the last room: black space so the walk ends with its text in the middle of the screen
+      const lastRoom = w.rooms[w.rooms.length - 1];
+      if (lastRoom && !w.tail) lastRoom.panel.parentNode.style.marginRight = Math.max(0, (W - lastRoom.panel.offsetWidth) / 2) + "px";
+      w.travel = Math.max(w.strip.scrollWidth - W, 1);
+      rec.node.style.height = w.travel + H + "px";
+      // texts end above the counter (bottom left), or textBottom vh above the bottom of the screen
+      const limit = w.textBottom != null ? H * (1 - w.textBottom / 100) : w.hud.offsetTop - H * 0.04;
+      w.rooms.forEach((r) => {
+        r.x = r.frame.offsetLeft;
+        r.w = r.frame.offsetWidth;
+        r.tx = r.panel.offsetLeft;
+        r.panel.style.height = Math.round(limit) + "px";
+        this.walkFade(r.panel);
+      });
+    }
+
+    /* fade at the bottom while there is more text below, at the top once it has been scrolled */
+    walkFade(panel) {
+      panel.classList.toggle("more", panel.scrollTop + panel.clientHeight < panel.scrollHeight - 2);
+      panel.classList.toggle("scrolled", panel.scrollTop > 2);
+    }
+
+    build_cards(ed, rec) {
+      const cols = ed.cols || 4;
+      rec.inner.style.display = "grid";
+      rec.inner.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      rec.inner.style.gap = ed.gap || "2vw";
+      rec.targets = [];
+      (ed.items || []).forEach((it, i) => {
+        const card = h("div", "card" + (it.goto ? " clickable" : ""));
+        card.dataset.id = it.id;
+        if (it.hover || ed.hover) card.classList.add("hover-" + (it.hover || ed.hover));
+        if (it.goto) {
+          card.tabIndex = 0;
+          card.addEventListener("click", () => this.go(it.goto));
+          card.addEventListener("keydown", (e) => { if (e.key === "Enter") this.go(it.goto); });
+        }
+        if (it.src) {
+          const wrap = h("div", "card-img");
+          const img = h("img");
+          img.src = it.src;
+          img.alt = "";
+          wrap.appendChild(img);
+          card.appendChild(wrap);
+        }
+        const label = h("div", "card-label");
+        this.typeStyle({ role: ed.role || "caption", color: ed.color, align: ed.align }, label);
+        card.appendChild(label);
+        rec.texts.push({ node: label, value: it.label, rich: false });
+        rec.inner.appendChild(card);
+        rec.targets.push({ node: card, extra: i * (ed.stagger != null ? ed.stagger : 90) });
+      });
+    }
+
+    /* ---------- language ---------- */
+    refreshLang() {
+      this.screens.forEach((s) =>
+        s.elements.forEach((e) =>
+          e.texts.forEach((t) => {
+            const v = this.tr(t.value);
+            if (t.rich) t.node.innerHTML = md(v);
+            else t.node.textContent = v;
+          })
+        )
+      );
+      this.ticks.querySelectorAll(".tick[data-nav]").forEach((b) => {
+        const label = this.tr(this.ex.nav[b.dataset.nav].label);
+        b.querySelector(".tick-label").textContent = label;
+        b.setAttribute("aria-label", label);
+      });
+      if (this.langBtn) {
+        this.langBtn.querySelectorAll(".lang-b").forEach((b) => b.classList.toggle("on", b.dataset.lang === this.lang));
+      }
+      document.documentElement.lang = this.lang;
+    }
+
+    setLang(l) {
+      this.lang = l;
+      try { localStorage.setItem("ex-lang", l); } catch (e) { /* ignore */ }
+      this.refreshLang();
+      if (this.current && this.current.def.scroll) this.bindScroll(this.current); // text lengths changed
+    }
+
+    /* ---------- navigation ---------- */
+    bindInput() {
+      let lastWheel = 0;
+      window.addEventListener("wheel", (e) => {
+        if (this.lb) return; // the lightbox handles its own wheel
+        const c = this.current;
+        if (c && c.sideways && Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); c.el.scrollTop += e.deltaX; return; }
+        if (c && c.def.scroll && e.deltaY) {
+          const el = c.el;
+          const dir = e.deltaY > 0 ? 1 : -1;
+          const atEnd = dir > 0 ? el.scrollTop + el.clientHeight >= el.scrollHeight - 2 : el.scrollTop <= 0;
+          if (!atEnd || this.scrollsInner(e.target, el, dir)) { this.edgePush = 0; return; } // still content: let it scroll natively
+          // at the edge: no rubber-band bounce; keep scrolling a little further and the next screen comes
+          e.preventDefault();
+          if (this.edgeDir !== dir) { this.edgeDir = dir; this.edgePush = 0; }
+          this.edgePush = (this.edgePush || 0) + Math.abs(e.deltaY);
+          if (this.busy || this.edgePush < 120) return;
+          this.edgePush = 0;
+          lastWheel = Date.now();
+          this.step(dir);
+          return;
+        }
+        e.preventDefault();
+        const now = Date.now();
+        if (this.busy || now - lastWheel < 700 || Math.abs(e.deltaY) < 12) return;
+        lastWheel = now;
+        this.step(e.deltaY > 0 ? 1 : -1);
+      }, { passive: false });
+      window.addEventListener("keydown", (e) => {
+        if (this.lb) return;
+        const side = this.current && this.current.sideways;
+        const down = ["ArrowDown", "PageDown", " "].includes(e.key) || (side && e.key === "ArrowRight");
+        const up = ["ArrowUp", "PageUp"].includes(e.key) || (side && e.key === "ArrowLeft");
+        if (down || up) {
+          e.preventDefault();
+          const dir = down ? 1 : -1;
+          if (this.scrollsInside(dir)) this.current.el.scrollBy({ top: dir * innerHeight * 0.6, behavior: "smooth" });
+          else this.step(dir);
+        }
+        else if (e.key === "d" || e.key === "D") document.body.classList.toggle("debug");
+      });
+      let ty = null;
+      window.addEventListener("touchstart", (e) => { ty = e.touches[0].clientY; }, { passive: true });
+      window.addEventListener("touchend", (e) => {
+        if (ty == null || this.lb) return;
+        const dy = ty - e.changedTouches[0].clientY;
+        ty = null;
+        if (Math.abs(dy) > 50 && !this.scrollsInside(dy)) this.step(dy > 0 ? 1 : -1);
+      });
+      const rebind = () => { if (this.current && this.current.def.scroll) this.bindScroll(this.current); };
+      window.addEventListener("resize", rebind);
+      // text heights change once the web fonts arrive: measure scroll lengths again
+      if (document.fonts) document.fonts.addEventListener("loadingdone", rebind);
+      window.addEventListener("hashchange", () => {
+        const id = location.hash.slice(1);
+        if (this.byId[id] && (!this.current || this.current.def.id !== id)) this.go(id, { noHash: true });
+      });
+    }
+
+    /* true if the wheel is over a scrollable block inside the screen (e.g. a long walkthrough text) that can still move in `dir` */
+    scrollsInner(node, screenEl, dir) {
+      for (let n = node; n && n !== screenEl && n.nodeType === 1; n = n.parentNode) {
+        if (n.scrollHeight > n.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(n).overflowY)) {
+          if (dir > 0 ? n.scrollTop + n.clientHeight < n.scrollHeight - 2 : n.scrollTop > 0) return true;
+        }
+      }
+      return false;
+    }
+
+    /* scrollable screen (def.scroll): true while there is still content in direction `dir`.
+       At the edge, the next screen is reached only after a short pause, so a fling doesn't skip past. */
+    scrollsInside(dir) {
+      const c = this.current;
+      if (!c || !c.def.scroll || !dir) return false;
+      const el = c.el;
+      const atEnd = dir > 0 ? el.scrollTop + el.clientHeight >= el.scrollHeight - 2 : el.scrollTop <= 0;
+      if (!atEnd) { this.edgeAt = 0; return true; }
+      const now = Date.now();
+      if (!this.edgeAt) this.edgeAt = now;
+      return now - this.edgeAt < 450;
+    }
+
+    step(dir) {
+      if (this.busy || !this.current) return;
+      const lin = this.track(this.trackName(this.current));
+      const i = lin.indexOf(this.current);
+      const next = lin[i + dir];
+      if (next) this.go(next.def.id);
+      else if (dir < 0 && this.current.def.infoPage) this.openInfo(); // top of an info page: Up goes back, like ×
+      else if (dir < 0 && this.current.def.back) this.go(this.current.def.back); // first screen of a sub-track: Up returns
+    }
+
+    async go(id, opts) {
+      opts = opts || {};
+      const target = this.byId[id];
+      if (!target || this.busy || target === this.current) return;
+      this.busy = true;
+      const prev = this.current;
+      if (prev) await this.leave(prev);
+      this.current = target;
+      if (!opts.noHash) { try { history.replaceState(null, "", "#" + id); } catch (e) { /* file:// */ } }
+      this.idLabel.textContent = "screen: " + id;
+      if (!prev || this.trackName(prev) !== this.trackName(target)) this.renderTicks(this.trackName(target));
+      clearTimeout(this.sceneTimer);
+      if (this.infoBtn) this.infoBtn.classList.remove("during-scene");
+      this.updateInfo(target);
+      const ni = this.navIndex(target);
+      this.ticks.querySelectorAll(".tick").forEach((t) => t.classList.toggle("on", this.ex.nav ? +t.dataset.nav === ni : t.dataset.id === id));
+      this.updateSound();
+      if (target.def.line && !opts.instant) this.lineAcross(target.def.line);
+      const dur = this.enter(target);
+      setTimeout(() => { this.busy = false; }, Math.min(dur, 1200));
+    }
+
+    /* lightbox: one image full screen. Wheel / + − / double-click zoom, drag to move around the image,
+       ← → (keys, buttons, swipe when not zoomed) step through all zoomable images of the current screen, Esc or × closes. */
+    openLightbox(rec) {
+      if (this.lb) return;
+      const list = this.current.elements.filter((e) => e.def.type === "image" && e.node.querySelector("img.zoomable") && e.node.style.display !== "none");
+      let i = Math.max(0, list.indexOf(rec));
+      const lb = h("div", "lb");
+      lb.setAttribute("role", "dialog");
+      lb.setAttribute("aria-modal", "true");
+      const stage = h("div", "lb-stage");
+      const img = h("img", "lb-img");
+      img.draggable = false;
+      stage.appendChild(img);
+      const bar = h("div", "lb-bar");
+      const info = h("div", "lb-info");
+      const cap = h("p", "lb-caption");
+      this.typeStyle({ role: "caption", color: "ink" }, cap);
+      const cred = h("div", "lb-credit");
+      const txt = h("p", "lb-text");
+      this.typeStyle({ role: "body", color: "ink" }, txt);
+      info.appendChild(txt);
+      info.appendChild(cap);
+      info.appendChild(cred);
+      const ctr = h("div", "lb-controls");
+      const btn = (label, aria, fn) => { const b = h("button", "lb-btn"); b.type = "button"; b.textContent = label; b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); ctr.appendChild(b); return b; };
+      const count = h("span", "lb-count");
+      this.typeStyle({ role: "label" }, count);
+      const prev = btn("←", "Previous image", () => show(i - 1));
+      ctr.appendChild(count);
+      const next = btn("→", "Next image", () => show(i + 1));
+      btn("−", "Zoom out", () => zoomAt(z.s / 1.5));
+      btn("+", "Zoom in", () => zoomAt(z.s * 1.5));
+      btn("×", "Close", () => close());
+      bar.appendChild(info);
+      bar.appendChild(ctr);
+      lb.appendChild(stage);
+      lb.appendChild(bar);
+      document.body.appendChild(lb);
+      this.lb = lb;
+
+      const z = { s: 1, x: 0, y: 0 };
+      const apply = (smooth) => {
+        img.style.transition = smooth ? "transform .35s cubic-bezier(.16,1,.3,1)" : "none";
+        img.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`;
+        lb.classList.toggle("zoomed", z.s > 1.01);
+      };
+      const clamp = () => {
+        const r = stage.getBoundingClientRect();
+        const mx = Math.max(0, (img.offsetWidth * z.s - r.width) / 2), my = Math.max(0, (img.offsetHeight * z.s - r.height) / 2);
+        z.x = Math.min(mx, Math.max(-mx, z.x));
+        z.y = Math.min(my, Math.max(-my, z.y));
+      };
+      // zoom keeping the point under (cx, cy) in place; without a point, around the centre
+      const zoomAt = (s, cx, cy) => {
+        const r = stage.getBoundingClientRect();
+        const ns = Math.min(6, Math.max(1, s));
+        const px = (cx != null ? cx : r.left + r.width / 2) - (r.left + r.width / 2);
+        const py = (cy != null ? cy : r.top + r.height / 2) - (r.top + r.height / 2);
+        z.x = px - (px - z.x) * (ns / z.s);
+        z.y = py - (py - z.y) * (ns / z.s);
+        z.s = ns;
+        if (ns === 1) { z.x = 0; z.y = 0; }
+        clamp();
+        apply(true);
+      };
+      const show = (k) => {
+        i = (k + list.length) % list.length;
+        const d = list[i].def;
+        img.src = d.zoomSrc || d.src;
+        img.alt = this.tr(d.alt) || "";
+        cap.innerHTML = md(this.tr(d.caption || ""));
+        txt.innerHTML = d.text ? md(this.tr(d.text)) : "";
+        txt.hidden = !d.text;
+        cred.innerHTML = "";
+        (Array.isArray(d.credit) ? d.credit : d.credit ? [d.credit] : []).forEach((line) => {
+          const pe = h("p", "lb-credit-line");
+          this.typeStyle({ role: "caption" }, pe);
+          pe.innerHTML = md(this.tr(line));
+          cred.appendChild(pe);
+        });
+        count.textContent = `${i + 1} / ${list.length}`;
+        prev.hidden = next.hidden = list.length < 2;
+        z.s = 1; z.x = 0; z.y = 0;
+        apply(false);
+      };
+      const close = () => {
+        lb.remove();
+        this.lb = null;
+        document.removeEventListener("keydown", onKey, true);
+        if (list[i]) { const t = list[i].node.querySelector("img"); if (t) t.focus && t.focus({ preventScroll: true }); }
+      };
+      const onKey = (e) => {
+        if (e.key === "Escape") close();
+        else if (e.key === "ArrowRight") show(i + 1);
+        else if (e.key === "ArrowLeft") show(i - 1);
+        else if (e.key === "+" || e.key === "=") zoomAt(z.s * 1.5);
+        else if (e.key === "-") zoomAt(z.s / 1.5);
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      document.addEventListener("keydown", onKey, true);
+      lb.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); zoomAt(z.s * Math.exp(-e.deltaY * 0.0025), e.clientX, e.clientY); }, { passive: false });
+      img.addEventListener("dblclick", (e) => zoomAt(z.s > 1.01 ? 1 : 2.5, e.clientX, e.clientY));
+      // drag (mouse, pen, one finger) moves the zoomed image; a sideways swipe when not zoomed changes the image
+      let drag = null;
+      stage.addEventListener("pointerdown", (e) => {
+        drag = { x: e.clientX, y: e.clientY, zx: z.x, zy: z.y, moved: false };
+        stage.setPointerCapture(e.pointerId);
+      });
+      stage.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+        if (z.s > 1.01) { z.x = drag.zx + dx; z.y = drag.zy + dy; clamp(); apply(false); }
+      });
+      stage.addEventListener("pointerup", (e) => {
+        if (!drag) return;
+        const dx = e.clientX - drag.x;
+        if (z.s <= 1.01 && Math.abs(dx) > 60) show(i + (dx < 0 ? 1 : -1));
+        else if (!drag.moved && e.target === stage) close(); // click on the empty area closes
+        drag = null;
+      });
+      ["touchstart", "touchend"].forEach((t) => lb.addEventListener(t, (e) => e.stopPropagation(), { passive: true }));
+      show(i);
+      lb.animate([{ opacity: 0 }, { opacity: 1 }], { duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300, easing: "ease-out" });
+      ctr.querySelector(".lb-btn:last-child").focus({ preventScroll: true });
+    }
+
+    /* line transition (screen.line): one free line runs across the screen while the next screen comes in,
+       drawn in from its start and let go at its end. line: true | {d, color, width, duration, viewBox} */
+    lineAcross(opt) {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const o = opt === true ? {} : opt;
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("class", "line-across");
+      svg.setAttribute("viewBox", o.viewBox || "0 0 1000 600");
+      svg.setAttribute("preserveAspectRatio", "none");
+      const d = o.d || "M -20 470 C 180 470, 260 300, 420 300 S 640 520, 780 380 S 940 140, 1020 120";
+      const pencil = o.pencil != null ? o.pencil : this.ex.theme.pencil;
+      // the noise filter is redrawn on every frame of the stroke: too heavy for phones, the line stutters there.
+      // On phones the pencil keeps only its second, fainter stroke.
+      const rough = pencil && !this.mobile;
+      if (rough) {
+        // pencil: the edge of the stroke is roughened by a little noise, and a fainter second stroke runs beside it
+        const defs = document.createElementNS(NS, "defs");
+        defs.innerHTML = '<filter id="lx-pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="' + Math.floor(Math.random() * 99) + '" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/></filter>';
+        svg.appendChild(defs);
+      }
+      const strokes = pencil ? [{ w: (o.width || 2) * 1.1, op: 0.85, dy: 0 }, { w: (o.width || 2) * 0.6, op: 0.4, dy: 1.6 }] : [{ w: o.width || 2, op: 1, dy: 0 }];
+      const paths = strokes.map((st) => {
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", d);
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke", this.color(o.color || this.ex.theme.lineColor || "ink"));
+        p.setAttribute("stroke-width", st.w);
+        p.setAttribute("stroke-opacity", st.op);
+        p.setAttribute("stroke-linecap", "round");
+        p.setAttribute("vector-effect", "non-scaling-stroke");
+        if (st.dy) p.setAttribute("transform", `translate(0 ${st.dy})`);
+        if (rough) p.setAttribute("filter", "url(#lx-pencil)");
+        svg.appendChild(p);
+        return p;
+      });
+      document.body.appendChild(svg);
+      const D = o.duration || this.ex.theme.lineDuration || 2400;
+      const anims = paths.map((p, k) => {
+        const L = FX.dashLength(p);
+        p.style.strokeDasharray = L + " " + L;
+        return p.animate(
+          [{ strokeDashoffset: L, offset: 0 }, { strokeDashoffset: 0, offset: 0.55 }, { strokeDashoffset: -L, offset: 1 }],
+          { duration: D, delay: k * 60, easing: "cubic-bezier(.55,0,.35,1)", fill: "both" }
+        );
+      });
+      Promise.all(anims.map((a) => a.finished)).then(() => svg.remove()).catch(() => svg.remove());
+    }
+
+    setBg(color, ms) {
+      this.stage.style.transition = `background-color ${ms}ms ease`;
+      this.stage.style.backgroundColor = this.color(color);
+    }
+
+    /* returns approx. ms until the screen has settled */
+    enter(rec) {
+      const def = rec.def;
+      rec.el.hidden = false;
+      rec.el.scrollTop = 0;
+      this.edgeAt = 0;
+      this.edgePush = 0;
+      rec.el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+      this.setBg(def.bg || this.ex.theme.bg || "black", def.bgMs || 900);
+      if (def.reveal && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        // reveal: the screen opens from a small circle or square in the middle and grows over the whole screen
+        const from = def.reveal === "square" ? "inset(46% 46% 46% 46%)" : "circle(2% at 50% 50%)";
+        const to = def.reveal === "square" ? "inset(0% 0% 0% 0%)" : "circle(75% at 50% 50%)";
+        rec.el.animate([{ clipPath: from }, { clipPath: to }], { duration: def.revealMs || 1400, easing: "cubic-bezier(.65,0,.35,1)" });
+      }
+      // chrome (menu squares, labels) takes the screen's ink colour, so it reads on light and dark screens
+      const rs = document.documentElement.style;
+      rs.setProperty("--chrome-fg", this.color(def.ink || this.ex.theme.ink || "white"));
+      rs.setProperty("--chrome-bg", this.color(def.bg || this.ex.theme.bg || "black"));
+      this.ticks.classList.toggle("hidden", def.nav === false);
+      let sceneTotal = 0;
+      let longest = 0;
+      if (def.scene) {
+        const sc = FX.scenes[def.scene.effect];
+        if (sc) {
+          rec.scene = sc.run(rec.el, def.scene, { lang: () => this.lang, setBg: (c, ms) => this.setBg(c, ms) });
+          sceneTotal = rec.scene.total;
+          // the info bubble waits until a whole-screen scene (e.g. the elevator) has played
+          if (this.infoBtn) {
+            this.infoBtn.classList.add("during-scene");
+            clearTimeout(this.sceneTimer);
+            this.sceneTimer = setTimeout(() => this.infoBtn.classList.remove("during-scene"), sceneTotal);
+          }
+        }
+      }
+      rec.elements.forEach((e) => {
+        const steps = e.def.enter;
+        if (!steps) return;
+        if (e.def.reveal === "scroll") { this.observeReveal(rec, e); return; }
+        const first = Array.isArray(steps) ? steps[0] : steps;
+        const base = first.after === "scene" ? sceneTotal : 0;
+        e.targets.forEach((t) => {
+          FX.run(t.node, steps, "in", base + t.extra);
+          const tm = FX.timing(first);
+          longest = Math.max(longest, base + t.extra + tm.delay + tm.duration);
+        });
+      });
+      if (def.scroll) this.bindScroll(rec);
+      return Math.max(longest, 600);
+    }
+
+    /* reveal: "scroll" — each target (e.g. each paragraph) plays its enter when it scrolls into view */
+    observeReveal(rec, e) {
+      if (!rec.io) {
+        rec.io = new IntersectionObserver((entries) => {
+          entries.forEach((en) => {
+            if (!en.isIntersecting) return;
+            const t = en.target;
+            rec.io.unobserve(t);
+            t.style.opacity = "";
+            FX.run(t, t._steps, "in", 0);
+          });
+        }, { root: rec.el, threshold: 0.2 });
+      }
+      e.targets.forEach((t) => {
+        t.node.style.opacity = "0";
+        t.node._steps = e.def.enter;
+        rec.io.observe(t.node);
+      });
+    }
+
+    /* ALL scroll-linked effects (scrub, blob-zoom, frame-parallax) go through bindScroll.
+       Where the browser supports it they run on a ScrollTimeline: the browser itself plays them in step
+       with the scroll position, on the compositor, so nothing lags behind the page (no jitter).
+       Otherwise they are applied from a scroll listener (fallback, still transform/opacity only).
+       New scroll effects must be added here, never as ad-hoc scroll handlers. */
+    bindScroll(rec) {
+      (rec.links || []).forEach((l) => l.anim && l.anim.cancel());
+      rec.links = [];
+      const el = rec.el;
+      const vh = innerHeight / 100;
+      const maxScroll = () => Math.max(el.scrollHeight - el.clientHeight, 1);
+      const useST = typeof ScrollTimeline !== "undefined";
+      const timeline = () => new ScrollTimeline({ source: el, axis: "block" });
+      const range = (start, end) => ({ rangeStart: start + "px", rangeEnd: end + "px" });
+
+      /* sampled: sampler(px) -> {cssProp: value}; sampled into keyframes over [start, end] px of scrolling */
+      const sampled = (node, sampler, start, end, n) => {
+        const link = { apply: (px) => Object.assign(node.style, sampler(px)) };
+        if (useST) {
+          try {
+            const N = n || 64;
+            const frames = [];
+            for (let i = 0; i <= N; i++) frames.push(Object.assign({ offset: i / N }, sampler(start + ((end - start) * i) / N)));
+            const a = node.animate(frames, Object.assign({ timeline: timeline(), fill: "both", easing: "linear" }, range(start, end)));
+            if (a.rangeStart === undefined) throw new Error("no range support");
+            link.anim = a;
+          } catch (err) { link.anim = null; }
+        }
+        rec.links.push(link);
+      };
+
+      /* frames: author-written keyframes (scrub) */
+      const framed = (node, sc) => {
+        const start = sc.start * vh;
+        const end = sc.end * vh;
+        const link = {};
+        if (useST) {
+          try {
+            const a = node.animate(sc.frames, Object.assign({ timeline: timeline(), fill: "both", easing: sc.ease || "linear" }, range(start, end)));
+            if (a.rangeStart === undefined) throw new Error("no range support");
+            link.anim = a;
+          } catch (err) { link.anim = null; }
+        }
+        if (!link.anim) {
+          const a = node.animate(sc.frames, { duration: 1000, easing: sc.ease || "linear", fill: "both" });
+          a.pause();
+          link.fallbackAnim = a;
+          link.apply = (px) => { a.currentTime = Math.min(Math.max((px - start) / (end - start), 0), 1) * 1000; };
+        }
+        rec.links.push(link);
+      };
+
+      rec.elements.forEach((e) => {
+        if (e.def.scrub) framed(e.node, e.def.scrub);
+        if (e.def.scrubDraw) {
+          // scrubDraw {start, end} (vh of scrolling): a line element's strokes draw themselves as the screen scrolls
+          e.node.querySelectorAll("path").forEach((p) => {
+            const L = FX.dashLength(p);
+            p.style.strokeDasharray = L + " " + L;
+            framed(p, { start: e.def.scrubDraw.start, end: e.def.scrubDraw.end, ease: e.def.scrubDraw.ease, frames: [{ strokeDashoffset: L }, { strokeDashoffset: 0 }] });
+          });
+        }
+        if (e.walk) {
+          const w = e.walk;
+          this.layoutWalk(e);
+          const W = innerWidth;
+          const T = w.travel;
+          const N = Math.min(400, Math.max(64, Math.round(T / 20)));
+          const clamp = (v) => Math.min(Math.max(v, 0), 1);
+          sampled(w.strip, (px) => ({ transform: `translateX(${-px}px)` }), 0, T, 2);
+          w.rooms.forEach((r, i) => {
+            sampled(r.img, (px) => {
+              // -1 … 1: photo centre from the right edge of the screen to the left one
+              const p = Math.min(Math.max((r.x + r.w / 2 - px - W / 2) / (W / 2 + r.w / 2), -1), 1);
+              return { transform: `translateX(${(-p * w.par / 100) * r.w}px) scale(${1 + 0.05 * (1 - Math.abs(p))})` };
+            }, 0, T, N);
+            sampled(r.panel, (px) => ({ opacity: clamp((W - (r.tx - px)) / (W * 0.3)) }), 0, T, N);
+            const next = w.rooms[i + 1];
+            const fade = W * 0.06;
+            const here = (px) => {
+              const c = px + W / 2;
+              return { opacity: (i ? clamp((c - r.x) / fade) : 1) * (next ? 1 - clamp((c - next.x) / fade) : 1) };
+            };
+            sampled(w.labels[i], here, 0, T, N);
+            if (w.dots) sampled(w.dots[i], here, 0, T, N);
+          });
+          sampled(w.fill, (px) => ({ transform: `scaleX(${px / T})` }), 0, T, 2);
+        }
+        if (e.blob) {
+          this.layoutBlob(e);
+          const [s0, s1] = e.blob.range;
+          const start = s0 * vh;
+          const end = s1 * vh;
+          const lw = { apply: (px) => this.applyBlob(e, px) };
+          rec.links.push(lw);
+          if (useST) {
+            try {
+              const N = 64;
+              const fw = [];
+              const fi = [];
+              for (let i = 0; i <= N; i++) {
+                const f = this.blobSample(e, start + ((end - start) * i) / N);
+                fw.push({ offset: i / N, transform: f.win });
+                fi.push({ offset: i / N, transform: f.img });
+              }
+              const opt = Object.assign({ timeline: timeline(), fill: "both", easing: "linear" }, range(start, end));
+              const a1 = e.bzWin.animate(fw, opt);
+              const a2 = e.bzImg.animate(fi, Object.assign({}, opt, { timeline: timeline() }));
+              if (a1.rangeStart === undefined) throw new Error("no range support");
+              lw.anim = { cancel() { a1.cancel(); a2.cancel(); } };
+            } catch (err) { lw.anim = null; }
+          }
+          if (!lw.anim) this.applyBlob(e, el.scrollTop);
+        }
+        if (e.parallaxImg) {
+          const node = e.node;
+          const par = e.def.parallax;
+          const sampler = (px) => {
+            const H = innerHeight;
+            const hh = node.offsetHeight;
+            // -1 … 1: frame centre from the bottom of the viewport to the top
+            const p = Math.min(Math.max((node.offsetTop - px + hh / 2 - H / 2) / (H / 2 + hh / 2), -1), 1);
+            return { transform: `translateY(${(-p * par / 100) * hh}px)` };
+          };
+          const end = maxScroll();
+          const link = { apply: (px) => Object.assign(e.parallaxImg.style, sampler(px)) };
+          if (useST) {
+            try {
+              const N = 64;
+              const frames = [];
+              for (let i = 0; i <= N; i++) frames.push(Object.assign({ offset: i / N }, sampler((end * i) / N)));
+              const a = e.parallaxImg.animate(frames, Object.assign({ timeline: timeline(), fill: "both", easing: "linear" }, range(0, end)));
+              if (a.rangeStart === undefined) throw new Error("no range support");
+              link.anim = a;
+            } catch (err) { link.anim = null; }
+          }
+          rec.links.push(link);
+          if (!link.anim) link.apply(el.scrollTop);
+        }
+      });
+      if (!useST || rec.links.some((l) => !l.anim)) this.onScroll(rec);
+    }
+
+    /* fallback only: runs the effects that could not be put on a ScrollTimeline */
+    onScroll(rec) {
+      const st = rec.el.scrollTop;
+      (rec.links || []).forEach((l) => { if (!l.anim && l.apply) l.apply(st); });
+    }
+
+    async leave(rec) {
+      const def = rec.def;
+      let longest = 0;
+      const ps = [];
+      rec.elements.forEach((e) => {
+        if (!e.def.exit) return;
+        e.targets.forEach((t) => {
+          ps.push(FX.run(t.node, e.def.exit, "out", 0));
+        });
+        const first = Array.isArray(e.def.exit) ? e.def.exit[0] : e.def.exit;
+        const tm = FX.timing(first);
+        longest = Math.max(longest, tm.delay + tm.duration);
+      });
+      const screenExit = rec.el.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: (def.exit && def.exit.duration) || 500,
+        delay: 0,
+        easing: "ease-in",
+        fill: "both"
+      });
+      ps.push(screenExit.finished);
+      if (rec.scene && rec.scene.cancel) rec.scene.cancel();
+      await Promise.all(ps);
+      rec.el.hidden = true;
+      rec.el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+      rec.el.querySelectorAll(".fx-tiles").forEach((n) => n.remove());
+      rec.el.querySelectorAll("img").forEach((i) => { i.style.visibility = ""; });
+      rec.el.querySelectorAll(".list-preview.on").forEach((p) => p.classList.remove("on"));
+      if (rec.io) { rec.io.disconnect(); rec.io = null; }
+      rec.elements.forEach((e) => {
+        if (e.def.reveal === "scroll") e.targets.forEach((t) => { t.node.style.opacity = ""; });
+      });
+    }
+  }
+
+  g.Engine = Engine;
+})(window);
+
+</script>
+  <script>new Engine(document.getElementById("root"), window.EXHIBITION);</script>
+</body>
+</html>
