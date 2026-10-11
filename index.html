@@ -9,7 +9,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 body { font-family: var(--font); -webkit-font-smoothing: antialiased; color: #fff; }
-button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; } /* manipulation: quick taps never zoom the page */
 
 #root, .stage { position: fixed; inset: 0; overflow: hidden; }
 .screen { position: absolute; inset: 0; overflow: hidden; }
@@ -219,7 +219,7 @@ body.debug .slot .inner { display: flex; align-items: center; justify-content: c
 
 /* lightbox (theme.zoom / image.zoom) */
 img.zoomable { cursor: zoom-in; }
-.lb { position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; background: var(--c-paper, #fff); color: var(--c-ink, #000); }
+.lb { position: fixed; inset: 0; z-index: 95; touch-action: none; display: flex; flex-direction: column; background: var(--c-paper, #fff); color: var(--c-ink, #000); }
 .lb-stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4vh 4vw 0; touch-action: none; cursor: zoom-out; }
 .lb-img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: 50% 50%; user-select: none; cursor: zoom-in; will-change: transform; }
 .lb.zoomed .lb-img { cursor: grab; }
@@ -231,7 +231,8 @@ img.zoomable { cursor: zoom-in; }
 .lb-caption, .lb-credit-line { margin: 0; }
 .lb-credit { margin-top: .5em; display: flex; flex-wrap: wrap; column-gap: 1.2em; }
 .lb-controls { display: flex; align-items: center; gap: 8px; flex: none; }
-.lb-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--c-ink, #000); font: 400 18px/1 var(--font); display: flex; align-items: center; justify-content: center; transition: background-color .25s, color .25s; }
+.lb-btn { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 2px solid var(--c-ink, #000); display: flex; align-items: center; justify-content: center; padding: 0; transition: background-color .25s, color .25s; }
+.lb-btn svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .lb-btn:hover, .lb-btn:focus-visible { background: var(--c-ink, #000); color: var(--c-paper, #fff); }
 .lb-btn[hidden] { display: none; }
 .lb-count { min-width: 4.5em; text-align: center; }
@@ -2024,7 +2025,7 @@ window.EXHIBITION = {
     /* route: a life drawn as one line. Across: time (years); up and down: a second value, e.g. latitude.
        {stops: [{label, note, year, value, side: "above" | "below", break: true}], end: {year, value},
         years: [from, to], values: [min, max], ticks: [years], vertical: false, current: stop index}
-       A stop with break: true draws the segment leading to it in the accent colour (a rupture).
+       A stop with break: true draws the segment leaving it (to the next stop) in the accent colour (a rupture).
        With enter {effect: "route"} the line draws itself and each stop appears as the line reaches it. */
     build_route(ed, rec) {
       const NS = "http://www.w3.org/2000/svg";
@@ -2054,7 +2055,7 @@ window.EXHIBITION = {
         const p = document.createElementNS(NS, "path");
         p.setAttribute("d", `M ${p1} C ${c1} ${c2} ${p2}`.replace(/,/g, " "));
         p.setAttribute("class", "route-seg");
-        const rupture = ed.stops[i + 1] && ed.stops[i + 1].break;
+        const rupture = ed.stops[i] && ed.stops[i].break;
         p.setAttribute("fill", "none");
         p.setAttribute("stroke", this.color(rupture ? ed.breakColor || "accent" : ed.stroke || "ink"));
         if (ed.mini && !rupture) p.style.stroke = "var(--chrome-fg)"; // the small map takes the screen's ink, light or dark
@@ -2762,15 +2763,27 @@ window.EXHIBITION = {
       info.appendChild(cap);
       info.appendChild(cred);
       const ctr = h("div", "lb-controls");
-      const btn = (label, aria, fn) => { const b = h("button", "lb-btn"); b.type = "button"; b.textContent = label; b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); ctr.appendChild(b); return b; };
+      // icons are drawn (SVG), not typed: font glyphs sit off-centre in a circle and are too thin
+      const ICON = {
+        prev: "M19 12H5M11 6l-6 6 6 6",
+        next: "M5 12h14M13 6l6 6-6 6",
+        out: "M6 12h12",
+        in: "M6 12h12M12 6v12",
+        close: "M6.5 6.5l11 11M17.5 6.5l-11 11"
+      };
+      const btn = (icon, aria, fn) => {
+        const b = h("button", "lb-btn"); b.type = "button"; b.setAttribute("aria-label", aria);
+        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[icon]}"/></svg>`;
+        b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); ctr.appendChild(b); return b;
+      };
       const count = h("span", "lb-count");
       this.typeStyle({ role: "label" }, count);
-      const prev = btn("←", "Previous image", () => show(i - 1));
+      const prev = btn("prev", "Previous image", () => show(i - 1));
       ctr.appendChild(count);
-      const next = btn("→", "Next image", () => show(i + 1));
-      btn("−", "Zoom out", () => zoomAt(z.s / 1.5));
-      btn("+", "Zoom in", () => zoomAt(z.s * 1.5));
-      btn("×", "Close", () => close());
+      const next = btn("next", "Next image", () => show(i + 1));
+      btn("out", "Zoom out", () => zoomAt(z.s / 1.5));
+      btn("in", "Zoom in", () => zoomAt(z.s * 1.5));
+      btn("close", "Close", () => close());
       bar.appendChild(info);
       bar.appendChild(ctr);
       lb.appendChild(stage);
@@ -2791,7 +2804,7 @@ window.EXHIBITION = {
         z.y = Math.min(my, Math.max(-my, z.y));
       };
       // zoom keeping the point under (cx, cy) in place; without a point, around the centre
-      const zoomAt = (s, cx, cy) => {
+      const zoomAt = (s, cx, cy, instant) => {
         const r = stage.getBoundingClientRect();
         const ns = Math.min(6, Math.max(1, s));
         const px = (cx != null ? cx : r.left + r.width / 2) - (r.left + r.width / 2);
@@ -2801,7 +2814,7 @@ window.EXHIBITION = {
         z.s = ns;
         if (ns === 1) { z.x = 0; z.y = 0; }
         clamp();
-        apply(true);
+        apply(!instant);
       };
       const show = (k) => {
         i = (k + list.length) % list.length;
@@ -2841,26 +2854,45 @@ window.EXHIBITION = {
       };
       document.addEventListener("keydown", onKey, true);
       lb.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); zoomAt(z.s * Math.exp(-e.deltaY * 0.0025), e.clientX, e.clientY); }, { passive: false });
-      img.addEventListener("dblclick", (e) => zoomAt(z.s > 1.01 ? 1 : 2.5, e.clientX, e.clientY));
-      // drag (mouse, pen, one finger) moves the zoomed image; a sideways swipe when not zoomed changes the image
-      let drag = null;
+      img.addEventListener("dblclick", (e) => { if (!touchTap) zoomAt(z.s > 1.01 ? 1 : 2.5, e.clientX, e.clientY); });
+      // pointers: one (mouse, pen, finger) drags the zoomed image, or swipes sideways to the next image when not zoomed;
+      // two fingers pinch-zoom around their midpoint; a double tap zooms in / back out (phones have no dblclick to rely on)
+      const pts = new Map();
+      let drag = null, pinch = null, lastTap = null, touchTap = false;
+      const two = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
       stage.addEventListener("pointerdown", (e) => {
-        drag = { x: e.clientX, y: e.clientY, zx: z.x, zy: z.y, moved: false };
-        stage.setPointerCapture(e.pointerId);
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        try { stage.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+        if (pts.size === 2) { const t = two(); pinch = { d: t.d, s: z.s }; drag = null; return; }
+        drag = { x: e.clientX, y: e.clientY, zx: z.x, zy: z.y, moved: false, onEmpty: e.target === stage };
       });
       stage.addEventListener("pointermove", (e) => {
+        if (!pts.has(e.pointerId)) return;
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch && pts.size === 2) { const t = two(); zoomAt(pinch.s * t.d / pinch.d, t.x, t.y, true); return; }
         if (!drag) return;
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-        if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+        if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
         if (z.s > 1.01) { z.x = drag.zx + dx; z.y = drag.zy + dy; clamp(); apply(false); }
       });
-      stage.addEventListener("pointerup", (e) => {
+      const up = (e) => {
+        pts.delete(e.pointerId);
+        if (pinch) { if (pts.size === 0) pinch = null; drag = null; return; } // a pinch never ends in a swipe or a tap
         if (!drag) return;
         const dx = e.clientX - drag.x;
+        touchTap = e.pointerType === "touch";
         if (z.s <= 1.01 && Math.abs(dx) > 60) show(i + (dx < 0 ? 1 : -1));
-        else if (!drag.moved && e.target === stage) close(); // click on the empty area closes
+        else if (!drag.moved && touchTap && !drag.onEmpty) {
+          const now = Date.now();
+          if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) {
+            zoomAt(z.s > 1.01 ? 1 : 2.5, e.clientX, e.clientY); lastTap = null;
+          } else lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
+        else if (!drag.moved && drag.onEmpty) close(); // a click on the empty area closes
         drag = null;
-      });
+      };
+      stage.addEventListener("pointerup", up);
+      stage.addEventListener("pointercancel", up);
       ["touchstart", "touchend"].forEach((t) => lb.addEventListener(t, (e) => e.stopPropagation(), { passive: true }));
       show(i);
       lb.animate([{ opacity: 0 }, { opacity: 1 }], { duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300, easing: "ease-out" });
