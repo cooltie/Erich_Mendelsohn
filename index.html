@@ -276,7 +276,8 @@ img.zoomable { cursor: zoom-in; }
 .wt-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
 .wt-slides img.on { opacity: 1; }
 .wt-slide-ctl { position: absolute; left: 2.4vw; bottom: 3vh; z-index: 2; display: flex; align-items: center; gap: 12px; }
-.wt-slide-btn { width: 44px; height: 44px; border-radius: 50%; background: rgba(21,20,19,.55); color: #fff; font: 400 20px/1 var(--font); display: flex; align-items: center; justify-content: center; transition: background-color .3s; }
+.wt-slide-btn { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 2px solid rgba(255,255,255,.85); background: rgba(21,20,19,.55); color: #fff; display: flex; align-items: center; justify-content: center; transition: background-color .3s; }
+.wt-slide-btn svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .wt-slide-btn:hover, .wt-slide-btn:focus-visible { background: rgba(21,20,19,.9); }
 .wt-slide-count { min-width: 3em; text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
 /* walkthrough: dots navigation (nav: "dots"), bottom right */
@@ -313,6 +314,13 @@ img.zoomable { cursor: zoom-in; }
 /* flow: an image block grows with its caption (the ratio sits on the picture, not on the block) */
 .screen.flow > .el-image:not(.img-circle) { aspect-ratio: auto !important; }
 .screen.flow > .el-image:not(.img-circle) .inner, .screen.flow > .el-image:not(.img-circle) img { height: auto; }
+
+/* walkthrough on phones: slides as a row that snaps (swipe sideways or use the arrows) */
+.wt-list-slides { position: relative; margin-bottom: 1.5vh; }
+.wt-list-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x pan-y; }
+.wt-list-row::-webkit-scrollbar { display: none; }
+.wt-list-row img { flex: 0 0 100%; width: 100%; height: 100%; margin: 0; object-fit: cover; scroll-snap-align: start; }
+.wt-list-slides .wt-slide-ctl { left: 12px; bottom: 12px; }
 
 </style>
 </head>
@@ -1527,6 +1535,15 @@ window.EXHIBITION = {
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>");
   const BOX = { x: "left", y: "top", w: "width", h: "height", left: "left", top: "top", right: "right", bottom: "bottom", width: "width", height: "height" };
+  // drawn icons for round buttons (lightbox, slides): font glyphs sit off-centre in a circle and are too thin
+  const ICON = {
+    prev: "M19 12H5M11 6l-6 6 6 6",
+    next: "M5 12h14M13 6l6 6-6 6",
+    out: "M6 12h12",
+    in: "M6 12h12M12 6v12",
+    close: "M6.5 6.5l11 11M17.5 6.5l-11 11"
+  };
+  const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[name]}"/></svg>`;
   const SVH = typeof CSS !== "undefined" && CSS.supports("height", "1svh"); // small-viewport units (iOS Safari 15.4+)
 
   class Engine {
@@ -2420,10 +2437,10 @@ window.EXHIBITION = {
             shots[cur].classList.add("on");
             count.textContent = `${cur + 1}/${shots.length}`;
           };
-          const arrow = (t, d, aria) => { const b = h("button", "wt-slide-btn"); b.type = "button"; b.textContent = t; b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); go(d); }); return b; };
-          ctl.appendChild(arrow("←", -1, "Previous photo"));
+          const arrow = (name, d, aria) => { const b = h("button", "wt-slide-btn"); b.type = "button"; b.innerHTML = icon(name); b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); go(d); }); return b; };
+          ctl.appendChild(arrow("prev", -1, "Previous photo"));
           ctl.appendChild(count);
-          ctl.appendChild(arrow("→", 1, "Next photo"));
+          ctl.appendChild(arrow("next", 1, "Next photo"));
           go(0);
           frame.appendChild(ctl);
         } else {
@@ -2516,16 +2533,48 @@ window.EXHIBITION = {
       rec.inner.appendChild(head);
       (ed.items || []).forEach((it) => {
         const item = h("div", "wt-list-item");
-        const img = h("img");
-        img.src = it.src || (it.slides && it.slides[0].src);
-        img.alt = it.alt || (it.slides && it.slides[0].alt) || "";
-        item.appendChild(img);
+        if (it.slides) item.appendChild(this.listSlides(it));
+        else {
+          const img = h("img");
+          img.src = it.src;
+          img.alt = it.alt || "";
+          item.appendChild(img);
+        }
         if (it.artist) text(item, it.artist, { role: "label", color: "grey" });
         (it.works || []).forEach((w) => { text(item, w.title, { role: "lead", weight: 500, color: ed.titleColor || "light" }); text(item, w.medium, { role: "body", color: "grey" }); });
         (it.paragraphs || []).forEach((p) => text(item, p, { role: "body", color: "light" }));
         (it.credits || []).forEach((p) => text(item, p, { role: "caption", color: "grey", italic: true }));
         rec.inner.appendChild(item);
       });
+    }
+
+    /* slides on a phone: the photos side by side in a row that snaps, swiped sideways with a finger or moved with the arrows */
+    listSlides(it) {
+      const wrap = h("div", "wt-list-slides");
+      const row = h("div", "wt-list-row");
+      row.style.aspectRatio = String(it.ratio || 4 / 3);
+      it.slides.forEach((sl) => {
+        const im = h("img");
+        im.src = sl.src;
+        im.alt = sl.alt || "";
+        row.appendChild(im);
+      });
+      wrap.appendChild(row);
+      const ctl = h("div", "wt-slide-ctl");
+      const count = h("span", "wt-slide-count");
+      this.typeStyle({ role: "label", color: "white" }, count);
+      const n = it.slides.length;
+      const cur = () => Math.round(row.scrollLeft / Math.max(row.clientWidth, 1));
+      const show = () => { count.textContent = `${cur() + 1}/${n}`; };
+      const go = (d) => row.scrollTo({ left: ((cur() + d + n) % n) * row.clientWidth, behavior: "smooth" });
+      const arrow = (name, d, aria) => { const b = h("button", "wt-slide-btn"); b.type = "button"; b.innerHTML = icon(name); b.setAttribute("aria-label", aria); b.addEventListener("click", (e) => { e.stopPropagation(); go(d); }); return b; };
+      ctl.appendChild(arrow("prev", -1, "Previous photo"));
+      ctl.appendChild(count);
+      ctl.appendChild(arrow("next", 1, "Next photo"));
+      row.addEventListener("scroll", show, { passive: true });
+      show();
+      wrap.appendChild(ctl);
+      return wrap;
     }
 
     /* walkthrough geometry, measured whenever the screen is (re)bound: the screen scrolls exactly as far as the strip travels.
@@ -2763,17 +2812,9 @@ window.EXHIBITION = {
       info.appendChild(cap);
       info.appendChild(cred);
       const ctr = h("div", "lb-controls");
-      // icons are drawn (SVG), not typed: font glyphs sit off-centre in a circle and are too thin
-      const ICON = {
-        prev: "M19 12H5M11 6l-6 6 6 6",
-        next: "M5 12h14M13 6l6 6-6 6",
-        out: "M6 12h12",
-        in: "M6 12h12M12 6v12",
-        close: "M6.5 6.5l11 11M17.5 6.5l-11 11"
-      };
-      const btn = (icon, aria, fn) => {
+      const btn = (name, aria, fn) => {
         const b = h("button", "lb-btn"); b.type = "button"; b.setAttribute("aria-label", aria);
-        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[icon]}"/></svg>`;
+        b.innerHTML = icon(name);
         b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); ctr.appendChild(b); return b;
       };
       const count = h("span", "lb-count");
