@@ -307,6 +307,11 @@ img.zoomable { cursor: zoom-in; }
 .screen.flow > .el { position: relative !important; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important; flex: none; min-height: 0; max-width: 100%; margin-top: 5vh; }
 .screen.flow > .el:first-child { margin-top: 0; }
 .screen.flow .img-caption { position: static; }
+/* phones: the pinned layer is as tall as what is actually visible (iOS Safari bars), see SVH in engine.js */
+@media (max-width: 700px) { @supports (height: 1svh) { .pin-layer { height: 100svh; } } }
+/* flow: an image block grows with its caption (the ratio sits on the picture, not on the block) */
+.screen.flow > .el-image:not(.img-circle) { aspect-ratio: auto !important; }
+.screen.flow > .el-image:not(.img-circle) .inner, .screen.flow > .el-image:not(.img-circle) img { height: auto; }
 
 </style>
 </head>
@@ -479,18 +484,20 @@ window.EXHIBITION = {
           box: { left: "4vw", top: "15vh", width: "29vw" }, mobile: { box: { left: "6vw", top: "11vh", width: "80vw" } },
           enter: { effect: "words-in", stagger: 60, speed: "slow", delay: 2600 } },
         { id: "cover-title", type: "text", role: "display", paragraphs: ["Dynamics", "and Function"], gap: 0,
-          box: { left: "4vw", top: "50vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "58vh", width: "88vw" } },
+          box: { left: "4vw", top: "50vh", width: "52vw" },
+          // phones: the first line sits half over the bottom of the sketch (sketch 88vw wide, ratio 0.696; display 52px)
+          mobile: { box: { left: "6vw", top: "calc(22vh + 88vw * 0.696 - 30px)", width: "88vw" } },
           enter: { effect: "wipe", from: "left", speed: "slow", delay: 900 } },
         { id: "cover-subtitle", type: "text", role: "title", text: "The Line of Erich Mendelsohn",
           box: { left: "4vw", top: "calc(50vh + 1.76 * clamp(52px,min(7.6vw,13.5vh),150px) + 4vh)", width: "45vw" },
-          mobile: { box: { left: "6vw", top: "calc(58vh + 1.76 * 52px + 2vh)", width: "88vw" } },
+          mobile: { box: { left: "6vw", top: "calc(22vh + 88vw * 0.696 - 30px + 1.76 * 52px + 1.5vh)", width: "88vw" } },
           enter: { effect: "fade-up", delay: 1500 } },
         { id: "cover-actions", type: "buttons",
           items: [
             { text: "Walk the line", goto: "about", variant: "solid", color: "ink", arrow: true },
             { text: "Explore freely", goto: "route", variant: "link", color: "ink" }
           ],
-          box: { left: "4vw", bottom: "7vh" }, mobile: { box: { left: "6vw", bottom: "12vh" } },
+          box: { left: "4vw", bottom: "7vh" }, mobile: { box: { left: "6vw", bottom: "6vh" } },
           enter: { effect: "fade-up", delay: 3800 } }
       ]
     },
@@ -570,21 +577,21 @@ window.EXHIBITION = {
           text: "A long building pulled flat under one great arc, in red pencil, with a quieter grey version below. In the corner he wrote down what was playing: *Bach. Cellosonate*. Nothing here is a plan yet. The building is heard before it is designed.",
           caption: "*Musical sketches*, 1914 · graphite and coloured pencil on tracing paper · 9.8 × 17.2 cm",
           credit: ["**Musikalische Skizzen**, 1914", "Erich Mendelsohn. Graphite, coloured pencil on tracing paper, 9.8 × 17.2 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 617.", "Public Domain Mark 1.0."],
-          box: { left: "35.2vw", top: "11vh", width: "min(37.4vw, 54vh)" }, mobile: { box: { width: "88vw", order: "4" } },
+          box: { left: "35.2vw", top: "11vh", width: "min(37.4vw, 54vh)" }, mobile: { box: { width: "88vw", order: "4" }, reveal: "scroll", enter: { effect: "fade-up", distance: "90px", duration: 1100 } },
           enter: { effect: "fade-up", speed: "slow", delay: 300 } },
         { id: "sketch-1920-music", type: "image", src: "assets/img/sketch-music-1920.webp",
           alt: "Musical sketch, 1920: two perspectives of stepped architectural masses in soft pencil",
           text: "Two views of stepped masses in soft pencil, rubbed and drawn again. By 1920 the musical sketch had become his way of working: a fast record of a form before there is a site, a client or a plan.",
           caption: "*Musical sketches*, 1920 · pencil · 9.6 × 16 cm",
           credit: ["**Musikalische Skizzen, zwei Perspektiven architektonische Strukturen**, 1920", "Erich Mendelsohn. Pencil on paper, 9.6 × 16.0 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 808. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
-          box: { left: "74.6vw", top: "21vh", width: "min(20vw, 34vh)" }, mobile: { box: { width: "88vw", order: "6" } },
+          box: { left: "74.6vw", top: "21vh", width: "min(20vw, 34vh)" }, mobile: { box: { width: "88vw", order: "6" }, reveal: "scroll", enter: { effect: "fade-up", distance: "90px", duration: 1100 } },
           enter: { effect: "fade-up", speed: "slow", delay: 700 } },
         { id: "sketch-1920-free", type: "image", src: "assets/img/sketch-free-1920.webp",
           alt: "Sketch, free design, about 1920: a long building with rounded towers and window bands in black ink",
           text: "Pen and ink, the decisive line: rounded towers, bands of windows, a long body running out of the frame. Luise wrote to him that she saw the finished form in his ink contours, and found the restless ink drawings too much like Kandinsky.",
           caption: "*Sketch, free design*, about 1920 · pen and black ink on tracing paper · 7.6 × 17 cm",
           credit: ["**Skizze, Freier Entwurf**, about 1920", "Erich Mendelsohn. Pen and black ink on tracing paper, 7.6 × 17.0 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 286. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
-          box: { left: "74.6vw", bottom: "9vh", width: "min(20vw, 40vh)" }, mobile: { box: { width: "88vw", order: "7" } },
+          box: { left: "74.6vw", bottom: "9vh", width: "min(20vw, 40vh)" }, mobile: { box: { width: "88vw", order: "7" }, reveal: "scroll", enter: { effect: "fade-up", distance: "90px", duration: 1100 } },
           enter: { effect: "fade-up", speed: "slow", delay: 1100 } },
         miniRoute("sketch-map", 1917, "1914–1920 · Munich, Berlin, the front", null),
         { id: "sketch-front-1917", type: "image", src: "assets/img/sketch-front-1917.webp",
@@ -592,17 +599,17 @@ window.EXHIBITION = {
           text: "Drawn at the Eastern Front in 1917, where his unit had little to do in the bright Baltic summer. A hall with a swelling end and a row of hanging arches: no site, no client, only the idea of a building held in tension.",
           caption: "*Imaginary sketches from the Russian front*, 1917 · black ink on tracing paper · 7 × 20.8 cm",
           credit: ["**Imaginäre Skizzen von der russischen Front**, 1917", "Erich Mendelsohn. Pen and black ink on tracing paper, 7.0 × 20.8 cm.", "Staatliche Museen zu Berlin, Kunstbibliothek, Hdz E.M. 282. Photo: Dietmar Katz.", "Public Domain Mark 1.0."],
-          box: { left: "35.2vw", top: "56vh", width: "min(37.4vw, 72vh)" }, mobile: { box: { width: "88vw", order: "5" } },
+          box: { left: "35.2vw", top: "56vh", width: "min(37.4vw, 72vh)" }, mobile: { box: { width: "88vw", order: "5" }, reveal: "scroll", enter: { effect: "fade-up", distance: "90px", duration: 1100 } },
           enter: { effect: "fade-up", speed: "slow", delay: 1000 } },
         { id: "sketch-music-credit", type: "text", role: "small",
           text: "Sound: J. S. Bach, Cello Suite No. 1, BWV 1007, Prelude. Recording: Classicals.de, conducted by Philip Milman (classicals.de), CC BY 3.0.",
-          box: { left: "4vw", bottom: "4vh", width: "27vw" }, mobile: { box: { width: "88vw", order: "8", marginTop: "7vh" } }, enter: { effect: "fade-in", delay: 1600 } },
+          box: { left: "4vw", bottom: "4vh", width: "27vw" }, mobile: { box: { width: "88vw", order: "8", marginTop: "7vh" }, reveal: "scroll", enter: { effect: "fade-in" } }, enter: { effect: "fade-in", delay: 1600 } },
         { id: "sketch-portrait", type: "image", shape: "circle", src: "assets/img/portrait-mendelsohn.webp", focus: "55% 35%",
           alt: "Erich Mendelsohn, studio portrait: three-quarter view, round glasses, tweed jacket",
           caption: "Erich Mendelsohn",
           text: "A studio portrait from Munich, signed in ink at the lower left. Mendelsohn studied there and found his first circle among painters and stage designers before he had built anything.",
           credit: ["**Erich Mendelsohn**, studio portrait, Munich", "Photographer unknown. Retouched (cropped, colour) by Itzuvit.", "Wikimedia Commons: Erich_Mendelsohn_cropped.jpg", "Licence: CC BY 3.0 (creativecommons.org/licenses/by/3.0). Cropped to a circle here."],
-          box: { left: "4vw", top: "56vh", width: "11vw" }, mobile: { box: { width: "34vw", order: "3" } },
+          box: { left: "4vw", top: "56vh", width: "11vw" }, mobile: { box: { width: "34vw", order: "3" }, reveal: "scroll", enter: { effect: "scale-in", speed: "slow" } },
           enter: { effect: "scale-in", speed: "slow", delay: 900 } }
       ]
     },
@@ -610,21 +617,22 @@ window.EXHIBITION = {
     {
       id: "letter-1917",
       bg: "ink", ink: "paper", nav: false,
+      mobile: { scroll: true, flow: true }, // phones: label, quote, scan, source one under another
       sound: { src: "assets/audio/bach-bwv1007-prelude.mp3", volume: 0.35 },
       elements: [
         { id: "letter-1917-label", type: "text", role: "label", color: "paper", text: "Ilipan, Eastern Front · 8 June 1917",
           box: { left: "4vw", top: "5vh", width: "60vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in", delay: 300 } },
         { id: "letter-1917-quote", type: "text", role: "title", color: "paper", gap: "0.6em",
           paragraphs: ["“When I set down these visions, the *what* and the *how* sit hard against each other.", "The what is the sketch that no one else understands. The how is the thought in form, and only that makes it understandable.”"],
-          box: { left: "4vw", top: "20vh", width: "52vw" }, mobile: { box: { left: "6vw", top: "12vh", width: "88vw" } },
+          box: { left: "4vw", top: "20vh", width: "52vw" }, mobile: { box: { width: "88vw", marginTop: "5vh" } },
           enter: { effect: "words-in", stagger: 45, speed: "slow", delay: 600 } },
         { id: "letter-1917-from", type: "text", role: "small", color: "paper", text: "Erich Mendelsohn to Luise Mendelsohn. Translated from the German for this exhibition.",
-          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { left: "6vw", bottom: "5vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2600 } },
+          box: { left: "4vw", bottom: "8vh", width: "40vw" }, mobile: { box: { width: "88vw", order: "3", marginTop: "3vh" }, enter: { effect: "fade-in", delay: 1800 } }, enter: { effect: "fade-in", delay: 2600 } },
         { id: "letter-1917-scan", type: "image", src: "assets/img/letter-1917-06-08.webp", opacity: 0.92,
           alt: "Two handwritten pages of Erich Mendelsohn’s letter of 8 June 1917; the quoted passage is at the top of the right-hand page",
           text: "Pages 7 and 8 of a letter to Luise. The passage quoted here begins at the top of the right-hand page: *bei der Aufzeichnung der Gesichte*, when setting down the visions.",
           credit: ["**Erich Mendelsohn to Luise Mendelsohn**, Ilipan, 8 June 1917, pages 7–8", "© Stiftung Preußischer Kulturbesitz, Kunstbibliothek – Staatliche Museen zu Berlin. EMA – Erich Mendelsohn Archive, ID emaem_19170608_006_tb-02_v.", "Licence: CC BY-NC-SA 3.0 DE (creativecommons.org/licenses/by-nc-sa/3.0/de).", "Quotation translated from the German original for this exhibition."],
-          box: { left: "60.4vw", top: "18vh", width: "min(35.6vw, 82vh)" }, mobile: { box: { left: "6vw", top: "58vh", width: "88vw" } },
+          box: { left: "60.4vw", top: "18vh", width: "min(35.6vw, 82vh)" }, mobile: { box: { width: "88vw", order: "2", marginTop: "5vh" } },
           enter: { effect: "fade-in", speed: "slow", delay: 1400 } }
       ]
     },
@@ -640,37 +648,37 @@ window.EXHIBITION = {
           box: { left: "4vw", top: "5vh", width: "40vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
         miniRoute("et-map", 1920, "1920 · Potsdam", [0, 300]),
         { id: "et-hint", type: "text", role: "small", text: "Scroll ↓", pin: [0, 300],
-          box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 7vh)", width: "20vw" }, mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 6vh)" } },
+          box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 7vh)", width: "20vw" }, mobile: { box: { left: "6vw", top: "calc(12vh + 88vw * 0.69 + 3.3vw + 5vh)" } },
           scrub: { start: 0, end: 30, frames: [{ opacity: 1 }, { opacity: 0 }] } },
         { id: "et-photo", type: "image", src: "assets/img/einstein-tower-photo.webp", pin: [0, 300], mat: "white",
           text: "The tower as it stands today on the Telegrafenberg in Potsdam, seen from the same side as the 1920 sketch.",
           alt: "The Einstein Tower in Potsdam today: a pale rendered tower with a low curved wing to the left, seen from the north-west",
-          box: { left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "24vh", width: "88vw" } },
+          box: { left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "12vh", width: "88vw" } },
           scrub: { start: 110, end: 200, frames: [{ opacity: 0 }, { opacity: 1 }] } },
         { id: "et-sketch", type: "image", src: "assets/img/einstein-tower-sketch-1920-frame.webp", pin: [0, 300], zoom: false, mat: "white",
           alt: "Erich Mendelsohn’s sketch of the Einstein Tower, 1920, in black and yellow chalk",
-          box: { pointerEvents: "none", left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "24vh", width: "88vw" } },
+          box: { pointerEvents: "none", left: "4vw", top: "13vh", width: "min(60vw, 82vh)" }, mobile: { box: { left: "6vw", top: "12vh", width: "88vw" } },
           scrub: { start: 40, end: 150, frames: [{ opacity: 1 }, { opacity: 0 }] } },
         { id: "et-line", type: "line", viewBox: "0 0 1000 690", fit: "none", clip: true, paths: ET_LINE, stroke: "ink", width: 2, pin: [0, 300],
           box: { left: "4vw", top: "13vh", width: "min(60vw, 82vh)", height: "calc(min(60vw, 82vh) * 0.69)" },
-          mobile: { box: { left: "6vw", top: "24vh", width: "88vw", height: "calc(88vw * 0.69)" } },
+          mobile: { box: { left: "6vw", top: "12vh", width: "88vw", height: "calc(88vw * 0.69)" } },
           scrubDraw: { start: 25, end: 125 },
           scrub: { start: 190, end: 250, frames: [{ opacity: 1 }, { opacity: 0 }] } },
         { id: "et-cap-sketch", type: "text", role: "small", text: "*1920.* The sketch.", pin: [0, 300],
           box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 2.5vh)", width: "40vw" },
-          mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 2vh)", width: "88vw" } },
+          mobile: { box: { left: "6vw", top: "calc(12vh + 88vw * 0.69 + 3.3vw + 1.5vh)", width: "88vw" } },
           scrub: { start: 60, end: 110, frames: [{ opacity: 1 }, { opacity: 0 }] } },
         { id: "et-cap-photo", type: "text", role: "small", text: "*Today.* The tower on the Telegrafenberg, Potsdam. Photo: Bautsch, Wikimedia Commons, CC0.", pin: [0, 300],
           box: { left: "4vw", top: "calc(13vh + min(60vw, 82vh) * 0.69 + 3.3vw + 2.5vh)", width: "40vw" },
-          mobile: { box: { left: "6vw", top: "calc(24vh + 88vw * 0.69 + 2vh)", width: "88vw" } },
+          mobile: { box: { left: "6vw", top: "calc(12vh + 88vw * 0.69 + 3.3vw + 1.5vh)", width: "88vw" } },
           scrub: { start: 170, end: 210, frames: [{ opacity: 0 }, { opacity: 1 }] } },
         { id: "et-intro", type: "text", role: "lead", pin: [0, 300],
           text: "In 1920 he drew it in a few strokes of chalk. Keep scrolling: the line becomes the building.",
-          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "auto", bottom: "8vh", width: "88vw" } },
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "calc(12vh + 88vw * 0.69 + 3.3vw + 10vh)", width: "88vw" } },
           scrub: { start: 120, end: 180, frames: [{ opacity: 1 }, { opacity: 0 }] } },
         { id: "et-text", type: "text", role: "body", pin: [0, 300],
           text: "A solar observatory, built so that the astronomer Erwin Finlay-Freundlich could test Einstein’s theory of relativity in the light of the sun. Mendelsohn drew it for concrete. Most of it was built in brick and rendered so that it looks cast in one piece. The instruments were in place by 1924.",
-          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "auto", bottom: "4vh", width: "88vw" } },
+          box: { left: "70.6vw", top: "40vh", width: "23vw" }, mobile: { box: { left: "6vw", top: "calc(12vh + 88vw * 0.69 + 3.3vw + 10vh)", width: "88vw" } },
           scrub: { start: 220, end: 280, frames: [{ opacity: 0, transform: "translateY(20px)" }, { opacity: 1, transform: "none" }] } }
       ]
     },
@@ -679,20 +687,21 @@ window.EXHIBITION = {
     {
       id: "manifesto",
       bg: "ink", ink: "paper",
+      mobile: { scroll: true, flow: true }, // phones: quote, German, source one under another
       elements: [
         { id: "manifesto-label", type: "text", role: "label", color: "paper", text: "Room 2 · Dynamics and Function, 1923",
           box: { left: "4vw", top: "5vh", width: "60vw" }, mobile: { box: { left: "6vw", top: "4vh", width: "calc(88vw - 44px)" } }, enter: { effect: "fade-in" } },
         { id: "manifesto-quote", type: "text", role: "display", color: "paper", size: "clamp(38px,min(5.8vw,10vh),120px)", lh: "0.98",
           text: "“A single force is always static, but the play of forces is always *dynamic.”*",
-          box: { left: "4vw", top: "18vh", width: "88vw" }, mobile: { box: { left: "6vw", top: "14vh", width: "88vw" }, size: "38px" },
+          box: { left: "4vw", top: "18vh", width: "88vw" }, mobile: { box: { width: "88vw", marginTop: "6vh" }, size: "38px" },
           enter: { effect: "words-in", stagger: 70, speed: "slow", delay: 300 } },
         { id: "manifesto-de", type: "text", role: "lead", color: "paper", italic: true, opacity: 0.5,
           text: "„Wohl ist die Einzelkraft stets statisch, aber das Kräftespiel ist stets dynamisch!“",
           box: { left: "4vw", top: "calc(18vh + 3 * 0.98 * clamp(38px,min(5.8vw,10vh),120px) + 4vh)", width: "70vw" },
-          mobile: { box: { left: "6vw", top: "62vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2400 } },
+          mobile: { box: { width: "88vw", marginTop: "4vh" } }, enter: { effect: "fade-in", delay: 2400 } },
         { id: "manifesto-src", type: "text", role: "small", color: "paper",
           text: "Erich Mendelsohn, *Die internationale Übereinstimmung des neuen Baugedankens oder Dynamik und Funktion* (The international agreement of the new idea of building, or Dynamics and Function), lecture, Amsterdam, 1923. Published in *Das Gesamtschaffen des Architekten*, 1930. English translation made for this exhibition.",
-          box: { left: "4vw", bottom: "8vh", width: "60vw" }, mobile: { box: { left: "6vw", bottom: "4vh", width: "88vw" } }, enter: { effect: "fade-in", delay: 2800 } }
+          box: { left: "4vw", bottom: "8vh", width: "60vw" }, mobile: { box: { width: "88vw", marginTop: "5vh" } }, enter: { effect: "fade-in", delay: 2800 } }
       ]
     },
     /* Room 3 · The Dynamic City. Night: the city of the 1920s, its traffic and its lit bands of windows.
@@ -724,7 +733,7 @@ window.EXHIBITION = {
     /* Room 3 · walk through the city (scroll moves the strip sideways). Photos: Wikimedia Commons, licences per item. */
     {
       id: "city-walk",
-      bg: "ink", ink: "paper", scroll: true, reveal: "circle",
+      bg: "ink", ink: "paper", scroll: true, reveal: "circle", revealAt: "0% 100%",
       elements: [
         { id: "city-walk-strip", type: "walkthrough", textWidth: "34vw", gap: "8vw", parallax: 6, intro: "66vw", nav: "dots", introTitleRole: "display",
           introTitle: "Five works, 1921\u2060–\u20601930",
@@ -1513,6 +1522,7 @@ window.EXHIBITION = {
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>");
   const BOX = { x: "left", y: "top", w: "width", h: "height", left: "left", top: "top", right: "right", bottom: "bottom", width: "width", height: "height" };
+  const SVH = typeof CSS !== "undefined" && CSS.supports("height", "1svh"); // small-viewport units (iOS Safari 15.4+)
 
   class Engine {
     constructor(root, ex) {
@@ -1785,7 +1795,10 @@ window.EXHIBITION = {
       node.appendChild(inner);
       const box = ed.box || {};
       Object.keys(box).forEach((k) => {
-        const v = box[k];
+        let v = box[k];
+        // phones: vh is measured without the browser bars (iOS Safari), so a box anchored to the bottom ran into one placed from the top.
+        // svh is the height actually visible.
+        if (this.mobile && SVH && typeof v === "string") v = v.replace(/(\d)vh\b/g, "$1svh");
         node.style[BOX[k] || k] = typeof v === "number" ? v + (k === "y" || k === "h" || k === "top" || k === "bottom" || k === "height" ? "vh" : "vw") : v;
       });
       if (ed.hide) node.style.display = "none"; // e.g. mobile: {hide: true}
@@ -1813,7 +1826,8 @@ window.EXHIBITION = {
       screenEl._pins = screenEl._pins || {};
       const key = pin.join("-");
       if (!screenEl._pins[key]) {
-        const track = h("div", "pin-track", { top: pin[0] + "vh", height: pin[1] - pin[0] + 100 + "vh" });
+        const u = this.mobile && SVH ? "svh" : "vh";
+        const track = h("div", "pin-track", { top: pin[0] + u, height: pin[1] - pin[0] + 100 + u });
         const layer = h("div", "pin-layer");
         track.appendChild(layer);
         screenEl.appendChild(track);
@@ -1912,8 +1926,9 @@ window.EXHIBITION = {
       };
       b.addEventListener("click", (e) => { e.stopPropagation(); toggle(panel.hidden); });
       document.addEventListener("click", (e) => { if (!panel.hidden && !panel.contains(e.target)) toggle(false); });
-      rec.node.appendChild(b);
-      rec.node.appendChild(panel);
+      // on the picture's own box, so the "i" stays in the image's corner when a caption makes the block taller (flow)
+      rec.inner.appendChild(b);
+      rec.inner.appendChild(panel);
     }
 
     build_rule(ed, rec) {
@@ -2903,9 +2918,12 @@ window.EXHIBITION = {
       rec.el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
       this.setBg(def.bg || this.ex.theme.bg || "black", def.bgMs || 900);
       if (def.reveal && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        // reveal: the screen opens from a small circle or square in the middle and grows over the whole screen
-        const from = def.reveal === "square" ? "inset(46% 46% 46% 46%)" : "circle(2% at 50% 50%)";
-        const to = def.reveal === "square" ? "inset(0% 0% 0% 0%)" : "circle(75% at 50% 50%)";
+        // reveal: the screen opens from a small circle or square in the middle and grows over the whole screen.
+        // revealAt: where the circle starts, e.g. "0% 100%" (bottom left corner); from a corner it has to grow to the far corner.
+        const at = def.revealAt || "50% 50%";
+        const far = at === "50% 50%" ? "75%" : "150%";
+        const from = def.reveal === "square" ? "inset(46% 46% 46% 46%)" : `circle(2% at ${at})`;
+        const to = def.reveal === "square" ? "inset(0% 0% 0% 0%)" : `circle(${far} at ${at})`;
         rec.el.animate([{ clipPath: from }, { clipPath: to }], { duration: def.revealMs || 1400, easing: "cubic-bezier(.65,0,.35,1)" });
       }
       // chrome (menu squares, labels) takes the screen's ink colour, so it reads on light and dark screens
